@@ -1,0 +1,40 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost1",
+            "port": 5433,
+            "driver": "PostgreSQL",
+            "name": "Postgres Enterprise Manager - localhost1",
+            "database": "db_chubeo",
+            "password": "123",
+            "username": "postgres",
+            "connectionTimeout": 15
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5433,
+            "driver": "PostgreSQL",
+            "name": "Postgres Enterprise Manager - localhost",
+            "database": "db_chubeo",
+            "username": "public",
+            "password": "123",
+            "connectionTimeout": 15
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "chubeo_localhost",
+            "port": 5433,
+            "driver": "PostgreSQL",
+            "name": "Postgres Enterprise Manager - chubeo localhost",
+            "database": "db_chubeo",
+            "username": "postgres",
+            "password": "123",
+            "connectionTimeout": 15
+        }
+    ]
+}
