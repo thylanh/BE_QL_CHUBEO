@@ -15,7 +15,9 @@ npm install
 npm run start:dev
 ```
 
-Ứng dụng đọc cấu hình từ file `.env`. Cấu hình hiện tại dùng PostgreSQL tại `localhost:5433`, database `db_chubeo`, user `postgres`. Có thể thay đổi bằng các biến `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGPOOL_MAX` và `PGSSL`.
+Ứng dụng đọc cấu hình từ file `.env` khi chạy local. Khi deploy Render, cần thêm `DATABASE_URL` hoặc `DATABASE_URL_POOLED` trong **Environment Variables** của service, dùng connection string Neon có `sslmode=require`. Không commit file `.env` lên repository.
+
+Để Render nhận diện web service, app mặc định bind tại `0.0.0.0` và tự đọc port từ biến `PORT` của Render.
 
 Khi khởi động, `DatabaseService` tự tạo các bảng còn thiếu. File `Postgres Enterprise Manager - chubeo localhost.session.sql` có thể dùng để tạo dữ liệu mẫu hoặc kiểm tra thủ công.
 

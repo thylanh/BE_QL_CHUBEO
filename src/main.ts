@@ -7,17 +7,23 @@
 // }
 // bootstrap();
 
+import { loadEnvFile } from 'node:process';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import { initApp } from './init';
 
 async function bootstrap() {
+  try {
+    loadEnvFile();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   const app = await NestFactory.create(AppModule);
 
   const {
     PORT = 3000,
-    HOST = 'localhost',
+    HOST = '0.0.0.0',
     APP_PREFIX = '/api',
     APP_NAME = 'nestjs_app',
     NODE_ENV = 'development',
