@@ -17,6 +17,8 @@ npm run start:dev
 
 Ứng dụng đọc cấu hình từ file `.env` khi chạy local. Khi deploy Render, cần thêm `DATABASE_URL` hoặc `DATABASE_URL_POOLED` trong **Environment Variables** của service, dùng connection string Neon có `sslmode=require`. Không commit file `.env` lên repository.
 
+Nếu dùng `render.yaml`, chọn **New > Blueprint**, kết nối repository và nhập giá trị Neon khi Render hỏi biến `DATABASE_URL`. Nếu service đã tồn tại, vào **Environment > Add Environment Variable**, tạo key chính xác là `DATABASE_URL`, dán connection string Neon làm value, lưu lại rồi redeploy.
+
 Để Render nhận diện web service, app mặc định bind tại `0.0.0.0` và tự đọc port từ biến `PORT` của Render.
 
 Khi khởi động, `DatabaseService` tự tạo các bảng còn thiếu. File `Postgres Enterprise Manager - chubeo localhost.session.sql` có thể dùng để tạo dữ liệu mẫu hoặc kiểm tra thủ công.
