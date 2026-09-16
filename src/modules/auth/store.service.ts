@@ -14,7 +14,7 @@ export class AuthStoreService {
 
   async findUser(username: string) {
     const result = await this.database.query<User>(
-      'SELECT id, username, name, role, password_hash AS "passwordHash", active FROM users WHERE username = $1',
+      'SELECT id, username, name, role, password_hash AS "passwordHash", active, email, phone, created_at AS "createdAt" FROM users WHERE username = $1',
       [username],
     );
     return result.rows[0];
@@ -44,14 +44,14 @@ export class AuthStoreService {
 
   async listUsers() {
     const result = await this.database.query<User>(
-      'SELECT id, username, name, role, password_hash AS "passwordHash", active FROM users ORDER BY username ASC',
+      'SELECT id, username, name, role, password_hash AS "passwordHash", active, email, phone, created_at AS "createdAt" FROM users ORDER BY username ASC',
     );
     return result.rows;
   }
 
   async getUserById(id: string) {
     const result = await this.database.query<User>(
-      'SELECT id, username, name, role, password_hash AS "passwordHash", active FROM users WHERE id = $1',
+      'SELECT id, username, name, role, password_hash AS "passwordHash", active, email, phone, created_at AS "createdAt" FROM users WHERE id = $1',
       [id],
     );
     return result.rows[0];
@@ -98,7 +98,7 @@ export class AuthStoreService {
 
   async getUserByToken(token: string) {
     const result = await this.database.query<User>(
-      'SELECT u.id, u.username, u.name, u.role, u.password_hash AS "passwordHash", u.active FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = $1 AND u.active = TRUE',
+      'SELECT u.id, u.username, u.name, u.role, u.password_hash AS "passwordHash", u.active, u.email, u.phone, u.created_at AS "createdAt" FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = $1 AND u.active = TRUE',
       [token],
     );
     return result.rows[0];

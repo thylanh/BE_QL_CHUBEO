@@ -5,8 +5,18 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { User } from '../../shared/store.service';
+import { User as StoredUser } from '../../shared/store.service';
 import { AuthStoreService } from './store.service';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'MANAGER' | 'STAFF';
+  status: 'ACTIVE' | 'INACTIVE';
+  phone?: string;
+  createdAt: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -140,9 +150,17 @@ export class AuthService {
     await this.store.deleteSession(token);
   }
 
-  publicUser(user: User) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
+  publicUser(user: StoredUser): User {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email ?? user.username,
+      role: user.role,
+      status: user.active ? 'ACTIVE' : 'INACTIVE',
+      ...(user.phone ? { phone: user.phone } : {}),
+      createdAt: user.createdAt
+        ? new Date(user.createdAt).toISOString()
+        : new Date(0).toISOString(),
+    };
   }
 }

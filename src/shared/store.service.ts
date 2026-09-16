@@ -9,6 +9,9 @@ export interface User {
   role: Role;
   passwordHash: string;
   active: boolean;
+  email?: string;
+  phone?: string;
+  createdAt?: string;
 }
 
 export const hashPassword = (password: string) =>
