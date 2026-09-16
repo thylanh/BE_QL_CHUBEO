@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS orders (
   inventory_deducted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  completed_at TIMESTAMPTZ
+  completed_at TIMESTAMPTZ,
+  cancelled_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -86,6 +87,7 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS service_fee NUMERIC(12, 2) NOT NULL DEFAULT 0;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS inventory_deducted BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
 ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('PENDING', 'CONFIRMED', 'PROCESSING', 'COMPLETED', 'CANCELLED'));`;
 
@@ -117,6 +119,10 @@ export class DatabaseService implements OnModuleDestroy, OnModuleInit {
 
     if (result.rowCount === 0) {
       await this.query(bootstrapSql);
+    } else {
+      await this.query(
+        'ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ',
+      );
     }
   }
 

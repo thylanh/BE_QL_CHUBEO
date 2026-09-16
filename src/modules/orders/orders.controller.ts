@@ -74,7 +74,13 @@ export class OrdersController {
     const status = payload.status;
     if (
       !status ||
-      !['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(status)
+      ![
+        'PENDING',
+        'CONFIRMED',
+        'PROCESSING',
+        'COMPLETED',
+        'CANCELLED',
+      ].includes(status)
     )
       throw new BadRequestException('Trạng thái đơn hàng không hợp lệ');
     const current = (await this.store.listOrders()).find(

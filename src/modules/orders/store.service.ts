@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../../shared/database.service';
 
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+export type OrderStatus =
+  'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
 
 export interface MenuItem {
   id: string;
@@ -21,7 +22,7 @@ export interface InventoryItem {
   updatedAt: string;
 }
 
-export interface OrderLine {
+export interface OrderItem {
   menuItemId: string;
   name: string;
   quantity: number;
@@ -29,22 +30,29 @@ export interface OrderLine {
   total: number;
 }
 
+export type OrderLine = OrderItem;
+
 export interface Order {
   id: string;
-  code: string;
-  lines: OrderLine[];
+  table: string;
+  orderType: 'Tại quán' | 'Mang đi' | 'Giao hàng';
+  lines: OrderItem[];
+  note?: string;
+  subtotal: number;
+  serviceFee: number;
   total: number;
   status: OrderStatus;
-  note?: string;
+  inventoryDeducted: boolean;
   createdBy: string;
   createdAt: string;
-  updatedAt: string;
+  completedAt?: string;
+  cancelledAt?: string;
 }
 
 type MenuRow = MenuItem & { ingredient_id?: string; amount?: number };
-type OrderRow = Order & { line: OrderLine };
+type OrderRow = Order & { line: OrderItem };
 
-const orderQuery = `SELECT o.id, o.code, o.total::float8, o.status, o.note, o.created_by AS "createdBy", o.created_at AS "createdAt", o.updated_at AS "updatedAt", json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'unitPrice', oi.unit_price::float8, 'total', oi.total::float8) AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
+const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'unitPrice', oi.unit_price::float8, 'total', oi.total::float8) AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
 
 @Injectable()
 export class OrdersStoreService {
@@ -125,7 +133,9 @@ export class OrdersStoreService {
           [ingredientId],
         );
         if (!stock.rows[0] || stock.rows[0].quantity < amount)
-          throw new Error(`Tồn kho không đủ: ${stock.rows[0]?.name ?? ingredientId}`);
+          throw new Error(
+            `Tồn kho không đủ: ${stock.rows[0]?.name ?? ingredientId}`,
+          );
         await client.query(
           'UPDATE inventory SET quantity = quantity - $2, updated_at = NOW() WHERE id = $1',
           [ingredientId, amount],
@@ -153,18 +163,20 @@ export class OrdersStoreService {
         );
       return {
         id,
-        code,
-        lines: lines.map(({ ingredients, ...line }) => line),
+        table: '',
+        orderType: 'Tại quán' as const,
+        lines: lines.map(({ ...line }) => line),
+        note,
+        subtotal: total,
+        serviceFee: 0,
         total,
         status: 'PENDING' as OrderStatus,
-        note,
+        inventoryDeducted: true,
         createdBy: userId,
         createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
       };
     });
   }
-
   async updateOrderStatus(id: string, status: OrderStatus) {
     return this.database.transaction(async (client) => {
       const result = await client.query<Order>(
@@ -198,7 +210,7 @@ export class OrdersStoreService {
         }
       }
       await client.query(
-        'UPDATE orders SET status = $2, updated_at = NOW() WHERE id = $1',
+        "UPDATE orders SET status = $2, updated_at = NOW(), completed_at = CASE WHEN $2 = 'COMPLETED' THEN NOW() ELSE completed_at END, cancelled_at = CASE WHEN $2 = 'CANCELLED' THEN NOW() ELSE cancelled_at END WHERE id = $1",
         [id, status],
       );
       const updated = await client.query<OrderRow>(
@@ -251,14 +263,23 @@ function groupOrders(rows: OrderRow[]) {
   for (const row of rows) {
     const order = orders.get(row.id) ?? {
       id: row.id,
-      code: row.code,
+      table: row.table,
+      orderType: row.orderType,
       lines: [],
+      note: row.note ?? undefined,
+      subtotal: Number(row.subtotal),
+      serviceFee: Number(row.serviceFee),
       total: Number(row.total),
       status: row.status,
-      note: row.note ?? undefined,
+      inventoryDeducted: row.inventoryDeducted,
       createdBy: row.createdBy,
       createdAt: new Date(row.createdAt).toISOString(),
-      updatedAt: new Date(row.updatedAt).toISOString(),
+      completedAt: row.completedAt
+        ? new Date(row.completedAt).toISOString()
+        : undefined,
+      cancelledAt: row.cancelledAt
+        ? new Date(row.cancelledAt).toISOString()
+        : undefined,
     };
     if (row.line?.menuItemId) order.lines.push(row.line);
     orders.set(row.id, order);
