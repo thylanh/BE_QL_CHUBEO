@@ -17,6 +17,15 @@ npm run start:dev
 
 Ứng dụng đọc cấu hình từ file `.env` khi chạy local. Khi deploy Render, cần thêm `DATABASE_URL` hoặc `DATABASE_URL_POOLED` trong **Environment Variables** của service, dùng connection string Neon có `sslmode=require`. Không commit file `.env` lên repository.
 
+Để upload ảnh lên Cloudinary, thêm các biến môi trường sau:
+
+```text
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+CLOUDINARY_UPLOAD_FOLDER=bun-dau-chu-beo
+```
+
 Nếu dùng `render.yaml`, chọn **New > Blueprint**, kết nối repository và nhập giá trị Neon khi Render hỏi biến `DATABASE_URL`. Nếu service đã tồn tại, vào **Environment > Add Environment Variable**, tạo key chính xác là `DATABASE_URL`, dán connection string Neon làm value, lưu lại rồi redeploy.
 
 Để Render nhận diện web service, app mặc định bind tại `0.0.0.0` và tự đọc port từ biến `PORT` của Render.
@@ -104,6 +113,12 @@ Các quyền nghiệp vụ:
 ### Reports
 
 - `GET /api/reports/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
+
+### Uploads
+
+- `POST /api/uploads/image` (đã đăng nhập)
+
+Gửi request dạng `multipart/form-data` với field `file`. Chỉ nhận ảnh, tối đa 10 MB. Response trả về `secureUrl` và `publicId` của ảnh trên Cloudinary.
 
 Khi tạo đơn, hệ thống kiểm tra và trừ nguyên liệu theo định mức món. Khi hủy đơn, nguyên liệu được hoàn lại. Doanh thu chỉ tính các đơn có trạng thái `COMPLETED`.
 

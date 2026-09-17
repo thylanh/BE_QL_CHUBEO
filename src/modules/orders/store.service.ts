@@ -10,6 +10,11 @@ export interface MenuItem {
   name: string;
   price: number;
   ingredients: Record<string, number>;
+  created_at: string;
+  category: string | null;
+  description: string | null;
+  color: string | null;
+  menu_item_ingredients: { ingredient_id: string; amount: number }[];
   active: boolean;
 }
 
@@ -37,6 +42,7 @@ export interface Order {
   table: string;
   orderType: 'Tại quán' | 'Mang đi' | 'Giao hàng';
   lines: OrderItem[];
+  customerCount: number;
   note?: string;
   subtotal: number;
   serviceFee: number;
@@ -60,7 +66,7 @@ export class OrdersStoreService {
 
   async listMenuItems() {
     const result = await this.database.query<MenuRow>(
-      `SELECT m.id, m.name, m.price::float8, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.active = TRUE ORDER BY m.name`,
+      `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.created_at, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.active = TRUE ORDER BY m.name`,
     );
     return groupMenuItems(result.rows);
   }
@@ -104,7 +110,7 @@ export class OrdersStoreService {
   ) {
     return this.database.transaction(async (client) => {
       const menuResult = await client.query<MenuRow>(
-        `SELECT m.id, m.name, m.price::float8, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.id = ANY($1::text[]) AND m.active = TRUE`,
+        `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.created_at, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.id = ANY($1::text[]) AND m.active = TRUE`,
         [items.map((item) => item.menuItemId)],
       );
       const menuItems = groupMenuItems(menuResult.rows);
@@ -166,6 +172,7 @@ export class OrdersStoreService {
         table: '',
         orderType: 'Tại quán' as const,
         lines: lines.map(({ ...line }) => line),
+        customerCount: 0,
         note,
         subtotal: total,
         serviceFee: 0,
@@ -245,10 +252,20 @@ function groupMenuItems(rows: MenuRow[]) {
       name: row.name,
       price: Number(row.price),
       ingredients: {},
+      created_at: new Date(row.created_at).toISOString(),
+      category: row.category ?? null,
+      description: row.description ?? null,
+      color: row.color ?? null,
+      menu_item_ingredients: [],
       active: row.active,
     };
-    if (row.ingredient_id)
+    if (row.ingredient_id) {
       item.ingredients[row.ingredient_id] = Number(row.amount);
+      item.menu_item_ingredients.push({
+        ingredient_id: row.ingredient_id,
+        amount: Number(row.amount),
+      });
+    }
     items.set(row.id, item);
   }
   return [...items.values()];
@@ -266,6 +283,7 @@ function groupOrders(rows: OrderRow[]) {
       table: row.table,
       orderType: row.orderType,
       lines: [],
+      customerCount: row.customerCount ?? 0,
       note: row.note ?? undefined,
       subtotal: Number(row.subtotal),
       serviceFee: Number(row.serviceFee),
