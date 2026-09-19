@@ -19,29 +19,29 @@ const users = [
 ];
 
 const inventory = [
-  ['INV-BUN', 'Bún lá Phú Đô', 'kg', 50, 10, 15000],
-  ['INV-DAU', 'Đậu hũ Mơ tươi', 'bìa', 200, 30, 4000],
-  ['INV-THIT', 'Thịt bắp giò luộc', 'kg', 20, 5, 160000],
-  ['INV-CHACOM', 'Chả cốm Hà Nội', 'chiếc', 150, 25, 6000],
-  ['INV-NEMCHUA', 'Nem chua rán', 'chiếc', 120, 20, 5000],
-  ['INV-DOISUN', 'Dồi sụn nướng', 'chiếc', 100, 20, 8000],
-  ['INV-MAMTOM', 'Mắm tôm Thanh Hóa', 'lít', 15, 3, 60000],
-  ['INV-TAC', 'Quất (Tắc) tươi', 'kg', 10, 2, 20000],
-  ['INV-TRA', 'Trà lài khô', 'kg', 5, 1, 120000],
-  ['INV-COCA', 'Lon Coca-Cola 330ml', 'lon', 80, 15, 9000],
-  ['INV-SAU', 'Nước cốt sấu ngâm', 'lít', 10, 2, 50000],
-  ['INV-MO', 'Nước cốt mơ ngâm', 'lít', 10, 2, 50000],
+  ['INV-BUN', 'Bún lá Phú Đô', 'kg', 50, 10, 15000, 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80'],
+  ['INV-DAU', 'Đậu hũ Mơ tươi', 'bìa', 200, 30, 4000, 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=800&q=80'],
+  ['INV-THIT', 'Thịt bắp giò luộc', 'kg', 20, 5, 160000, 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=800&q=80'],
+  ['INV-CHACOM', 'Chả cốm Hà Nội', 'chiếc', 150, 25, 6000, 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=800&q=80'],
+  ['INV-NEMCHUA', 'Nem chua rán', 'chiếc', 120, 20, 5000, 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=800&q=80'],
+  ['INV-DOISUN', 'Dồi sụn nướng', 'chiếc', 100, 20, 8000, 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'],
+  ['INV-MAMTOM', 'Mắm tôm Thanh Hóa', 'lít', 15, 3, 60000, 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'],
+  ['INV-TAC', 'Quất (Tắc) tươi', 'kg', 10, 2, 20000, 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80'],
+  ['INV-TRA', 'Trà lài khô', 'kg', 5, 1, 120000, 'https://images.unsplash.com/photo-1466667384407-bf2e7e0b3e78?auto=format&fit=crop&w=800&q=80'],
+  ['INV-COCA', 'Lon Coca-Cola 330ml', 'lon', 80, 15, 9000, 'https://images.unsplash.com/photo-1622483767028-3f66f2b7420a?auto=format&fit=crop&w=800&q=80'],
+  ['INV-SAU', 'Nước cốt sấu ngâm', 'lít', 10, 2, 50000, 'https://images.unsplash.com/photo-1577805947697-89e18249d767?auto=format&fit=crop&w=800&q=80'],
+  ['INV-MO', 'Nước cốt mơ ngâm', 'lít', 10, 2, 50000, 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=800&q=80'],
 ];
 
 const menu = [
-  ['1', 'Bún đậu thập cẩm', 'Món chính', 69000, 'Đậu, chả cốm, thịt luộc, nem rán', 'from-amber-100 to-orange-50', [['INV-BUN', 0.3], ['INV-DAU', 2], ['INV-THIT', 0.1], ['INV-CHACOM', 2], ['INV-NEMCHUA', 2], ['INV-MAMTOM', 0.05], ['INV-TAC', 0.02]]],
-  ['2', 'Bún chả Hà Nội', 'Món chính', 55000, 'Chả nướng than hoa, bún tươi', 'from-rose-100 to-orange-50', [['INV-BUN', 0.35], ['INV-THIT', 0.15], ['INV-TAC', 0.02]]],
-  ['3', 'Bún nem nướng', 'Món chính', 59000, 'Nem nướng, rau sống, bún tươi', 'from-emerald-100 to-lime-50', [['INV-BUN', 0.3], ['INV-NEMCHUA', 3]]],
-  ['4', 'Dồi sụn nướng', 'Món thêm', 45000, 'Phần 5 chiếc, dồi nướng thơm phức', 'from-red-100 to-amber-50', [['INV-DOISUN', 5]]],
-  ['5', 'Nem rán giòn', 'Món thêm', 32000, 'Phần 4 chiếc giòn rụm', 'from-yellow-100 to-orange-50', [['INV-NEMCHUA', 4]]],
-  ['6', 'Trà tắc mật ong', 'Đồ uống', 22000, 'Trà nhài, tắc tươi, mật ong', 'from-lime-100 to-emerald-50', [['INV-TRA', 0.015], ['INV-TAC', 0.04]]],
-  ['7', 'Nước mơ Hà Nội', 'Đồ uống', 25000, 'Mơ ngâm thủ công, đá viên', 'from-yellow-100 to-amber-50', [['INV-MO', 0.05]]],
-  ['8', 'Coca-Cola', 'Đồ uống', 18000, 'Lon 330ml, ướp lạnh', 'from-sky-100 to-blue-50', [['INV-COCA', 1]]],
+  ['1', 'Bún đậu thập cẩm', 'Món chính', 69000, 'Đậu, chả cốm, thịt luộc, nem rán', 'from-amber-100 to-orange-50', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80', [['INV-BUN', 0.3], ['INV-DAU', 2], ['INV-THIT', 0.1], ['INV-CHACOM', 2], ['INV-NEMCHUA', 2], ['INV-MAMTOM', 0.05], ['INV-TAC', 0.02]]],
+  ['2', 'Bún chả Hà Nội', 'Món chính', 55000, 'Chả nướng than hoa, bún tươi', 'from-rose-100 to-orange-50', 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=1200&q=80', [['INV-BUN', 0.35], ['INV-THIT', 0.15], ['INV-TAC', 0.02]]],
+  ['3', 'Bún nem nướng', 'Món chính', 59000, 'Nem nướng, rau sống, bún tươi', 'from-emerald-100 to-lime-50', 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=1200&q=80', [['INV-BUN', 0.3], ['INV-NEMCHUA', 3]]],
+  ['4', 'Dồi sụn nướng', 'Món thêm', 45000, 'Phần 5 chiếc, dồi nướng thơm phức', 'from-red-100 to-amber-50', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80', [['INV-DOISUN', 5]]],
+  ['5', 'Nem rán giòn', 'Món thêm', 32000, 'Phần 4 chiếc giòn rụm', 'from-yellow-100 to-orange-50', 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=1200&q=80', [['INV-NEMCHUA', 4]]],
+  ['6', 'Trà tắc mật ong', 'Đồ uống', 22000, 'Trà nhài, tắc tươi, mật ong', 'from-lime-100 to-emerald-50', 'https://images.unsplash.com/photo-1466667384407-bf2e7e0b3e78?auto=format&fit=crop&w=1200&q=80', [['INV-TRA', 0.015], ['INV-TAC', 0.04]]],
+  ['7', 'Nước mơ Hà Nội', 'Đồ uống', 25000, 'Mơ ngâm thủ công, đá viên', 'from-yellow-100 to-amber-50', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=1200&q=80', [['INV-MO', 0.05]]],
+  ['8', 'Coca-Cola', 'Đồ uống', 18000, 'Lon 330ml, ướp lạnh', 'from-sky-100 to-blue-50', 'https://images.unsplash.com/photo-1622483767028-3f66f2b7420a?auto=format&fit=crop&w=1200&q=80', [['INV-COCA', 1]]],
 ];
 
 const orders = [
@@ -81,23 +81,24 @@ async function seed() {
         [id, email, name, role, hashPassword(password), phone, createdAt],
       );
     }
-    for (const [id, name, unit, quantity, minQuantity, costPrice] of inventory) {
+    for (const [id, name, unit, quantity, minQuantity, costPrice, image] of inventory) {
       await client.query(`
-        INSERT INTO inventory (id, name, unit, quantity, min_quantity, cost_price)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO inventory (id, name, unit, quantity, min_quantity, cost_price, image)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, unit = EXCLUDED.unit,
           quantity = EXCLUDED.quantity, min_quantity = EXCLUDED.min_quantity, cost_price = EXCLUDED.cost_price,
-          updated_at = NOW()`,
-        [id, name, unit, quantity, minQuantity, costPrice],
+          image = EXCLUDED.image, updated_at = NOW()`,
+        [id, name, unit, quantity, minQuantity, costPrice, image],
       );
     }
-    for (const [id, name, category, price, description, color, ingredients] of menu) {
+    for (const [id, name, category, price, description, color, image, ingredients] of menu) {
       await client.query(`
-        INSERT INTO menu_items (id, name, price, category, description, color, active)
-        VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+        INSERT INTO menu_items (id, name, price, category, description, color, image, active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price,
-          category = EXCLUDED.category, description = EXCLUDED.description, color = EXCLUDED.color, active = TRUE`,
-        [id, name, price, category, description, color],
+          category = EXCLUDED.category, description = EXCLUDED.description, color = EXCLUDED.color,
+          image = EXCLUDED.image, active = TRUE`,
+        [id, name, price, category, description, color, image],
       );
       await client.query('DELETE FROM menu_item_ingredients WHERE menu_item_id = $1', [id]);
       for (const [ingredientId, amount] of ingredients) {

@@ -14,6 +14,7 @@ export interface MenuItem {
   category: string | null;
   description: string | null;
   color: string | null;
+  image: string | null;
   menu_item_ingredients: { ingredient_id: string; amount: number }[];
   active: boolean;
 }
@@ -66,7 +67,7 @@ export class OrdersStoreService {
 
   async listMenuItems() {
     const result = await this.database.query<MenuRow>(
-      `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.created_at, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.active = TRUE ORDER BY m.name`,
+      `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.active = TRUE ORDER BY m.name`,
     );
     return groupMenuItems(result.rows);
   }
@@ -110,7 +111,7 @@ export class OrdersStoreService {
   ) {
     return this.database.transaction(async (client) => {
       const menuResult = await client.query<MenuRow>(
-        `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.created_at, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.id = ANY($1::text[]) AND m.active = TRUE`,
+        `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id WHERE m.id = ANY($1::text[]) AND m.active = TRUE`,
         [items.map((item) => item.menuItemId)],
       );
       const menuItems = groupMenuItems(menuResult.rows);
@@ -256,6 +257,7 @@ function groupMenuItems(rows: MenuRow[]) {
       category: row.category ?? null,
       description: row.description ?? null,
       color: row.color ?? null,
+      image: row.image ?? null,
       menu_item_ingredients: [],
       active: row.active,
     };

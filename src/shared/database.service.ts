@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS inventory (
   quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
   min_quantity INTEGER NOT NULL DEFAULT 0 CHECK (min_quantity >= 0),
   cost_price NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (cost_price >= 0),
+  image TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   category TEXT,
   description TEXT,
   color TEXT,
+  image TEXT,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -78,9 +80,11 @@ CREATE TABLE IF NOT EXISTS sessions (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE inventory ADD COLUMN IF NOT EXISTS cost_price NUMERIC(12, 2) NOT NULL DEFAULT 0;
+ALTER TABLE inventory ADD COLUMN IF NOT EXISTS image TEXT;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS color TEXT;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image TEXT;
 ALTER TABLE menu_item_ingredients ALTER COLUMN amount TYPE NUMERIC(12, 3);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS table_name TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type TEXT;
@@ -120,6 +124,12 @@ export class DatabaseService implements OnModuleDestroy, OnModuleInit {
     if (result.rowCount === 0) {
       await this.query(bootstrapSql);
     } else {
+      await this.query(
+        'ALTER TABLE inventory ADD COLUMN IF NOT EXISTS image TEXT',
+      );
+      await this.query(
+        'ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image TEXT',
+      );
       await this.query(
         'ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ',
       );
