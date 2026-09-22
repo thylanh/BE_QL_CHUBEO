@@ -51,6 +51,7 @@ Nếu gặp `EADDRINUSE`, port đang được process khác sử dụng. Đổi 
 ```text
 src/
 	modules/
+		menu/       # Quản lý thực đơn và định mức nguyên liệu
 		auth/       # Đăng nhập, session, tài khoản và AuthGuard
 		orders/     # Thực đơn và đơn hàng
 		inventory/  # Tồn kho
@@ -104,6 +105,16 @@ Các quyền nghiệp vụ:
 - `GET /api/orders`
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
+
+### Menu
+
+- `GET /api/menu?active=true|false`
+- `GET /api/menu/:id`
+- `POST /api/menu` (ADMIN, MANAGER)
+- `PATCH /api/menu/:id` (ADMIN, MANAGER)
+- `DELETE /api/menu/:id` (ADMIN, MANAGER)
+
+Menu item hỗ trợ `name`, `price`, `category`, `description`, `color`, `image`, `active` và danh sách `ingredients`. Xóa món là soft-delete bằng cách đặt `active = false` để không ảnh hưởng các đơn hàng cũ.
 
 ### Inventory
 

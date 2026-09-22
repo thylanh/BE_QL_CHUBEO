@@ -6,6 +6,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { MenuModule } from './modules/menu/menu.module';
 import { DatabaseModule } from './shared/database.module';
 
 @Module({
@@ -16,6 +17,7 @@ import { DatabaseModule } from './shared/database.module';
     InventoryModule,
     ReportsModule,
     UploadsModule,
+    MenuModule,
   ],
   controllers: [AppController],
   providers: [AppService],

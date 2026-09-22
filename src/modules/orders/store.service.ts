@@ -36,8 +36,6 @@ export interface OrderItem {
   total: number;
 }
 
-export type OrderLine = OrderItem;
-
 export interface Order {
   id: string;
   table: string;
