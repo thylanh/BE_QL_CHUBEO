@@ -15,7 +15,6 @@ export interface MenuItem {
   created_at: string;
   category: string | null;
   description: string | null;
-  color: string | null;
   image: string | null;
   menu_item_ingredients: MenuIngredient[];
   active: boolean;
@@ -29,12 +28,11 @@ export interface MenuInput {
   price: number;
   category?: string | null;
   description?: string | null;
-  color?: string | null;
   image?: string | null;
   active?: boolean;
   ingredients?: MenuIngredient[];
 }
-const menuQuery = `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.color, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount::float8 FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id`;
+const menuQuery = `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount::float8 FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id`;
 
 @Injectable()
 export class MenuStoreService {
@@ -57,14 +55,13 @@ export class MenuStoreService {
     const id = randomUUID();
     return this.database.transaction(async (client) => {
       await client.query(
-        'INSERT INTO menu_items (id, name, price, category, description, color, image, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        'INSERT INTO menu_items (id, name, price, category, description, image, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
         [
           id,
           input.name,
           input.price,
           input.category ?? null,
           input.description ?? null,
-          input.color ?? null,
           input.image ?? null,
           input.active ?? true,
         ],
@@ -87,7 +84,6 @@ export class MenuStoreService {
         setField('category', input.category ?? null);
       if (input.description !== undefined)
         setField('description', input.description ?? null);
-      if (input.color !== undefined) setField('color', input.color ?? null);
       if (input.image !== undefined) setField('image', input.image ?? null);
       if (input.active !== undefined) setField('active', input.active);
       if (fields.length) {
@@ -149,7 +145,6 @@ function groupMenuItems(rows: MenuRow[]) {
       created_at: new Date(row.created_at).toISOString(),
       category: row.category ?? null,
       description: row.description ?? null,
-      color: row.color ?? null,
       image: row.image ?? null,
       menu_item_ingredients: [],
       active: row.active,
