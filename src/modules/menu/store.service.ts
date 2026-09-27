@@ -119,7 +119,7 @@ export class MenuStoreService {
   //Xóa món ăn
   async deleteMenuItem(id: string) {
     const result = await this.database.query(
-      'DELETE FROM menu_items WHERE id = $1 AND active = true RETURNING id',
+      'DELETE FROM menu_items WHERE id = $1 RETURNING id',
       [id],
     );
     return result.rowCount ? true : false;
