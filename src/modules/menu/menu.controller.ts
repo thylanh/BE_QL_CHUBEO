@@ -53,6 +53,16 @@ export class MenuController {
       throw new BadRequestException('Không tìm thấy món đang hoạt động');
     return item;
   }
+  @Patch(':id/active') @Roles('ADMIN', 'MANAGER') async updateActive(
+    @Param('id') id: string,
+    @Body('active') active: boolean,
+  ) {
+    if (typeof active !== 'boolean')
+      throw new BadRequestException('active phải là boolean');
+    const item = await this.store.updateMenuItemActive(id, active);
+    if (!item) throw new BadRequestException('Không tìm thấy món');
+    return item;
+  }
 }
 function validateMenuInput(
   body: Partial<MenuInput>,

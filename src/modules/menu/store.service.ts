@@ -108,13 +108,21 @@ export class MenuStoreService {
       return getMenuItemWithClient(client, id);
     });
   }
-  //Xóa món ăn (chỉ xóa những món đang hoạt động)
-  async deleteMenuItem(id: string) {
+  //Cập nhật trạng thái món ăn (active)
+  async updateMenuItemActive(id: string, active: boolean) {
     const result = await this.database.query(
-      'UPDATE menu_items SET active = FALSE WHERE id = $1 AND active = TRUE RETURNING id',
-      [id],
+      'UPDATE menu_items SET active = $1 WHERE id = $2 RETURNING id',
+      [active, id],
     );
     return result.rowCount ? this.getMenuItem(id) : undefined;
+  }
+  //Xóa món ăn
+  async deleteMenuItem(id: string) {
+    const result = await this.database.query(
+      'DELETE FROM menu_items WHERE id = $1 AND active = true RETURNING id',
+      [id],
+    );
+    return result.rowCount ? true : false;
   }
 }
 async function getMenuItemWithClient(client: PoolClient, id: string) {
