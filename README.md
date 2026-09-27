@@ -15,7 +15,7 @@ npm install
 npm run start:dev
 ```
 
-Ứng dụng đọc cấu hình từ file `.env` khi chạy local. Khi deploy Render, cần thêm `DATABASE_URL` hoặc `DATABASE_URL_POOLED` trong **Environment Variables** của service, dùng connection string Neon có `sslmode=require`. Không commit file `.env` lên repository.
+Ứng dụng đọc cấu hình từ file `.env` khi chạy local. Khi deploy Render, cần thêm `DATABASE_URL` hoặc `DATABASE_URL_POOLED` trong **Environment Variables** của service, dùng connection string Neon có `sslmode=verify-full`. Các URL dùng `sslmode=prefer`, `require` hoặc `verify-ca` sẽ được chuẩn hóa sang `verify-full` trước khi kết nối để giữ xác thực chứng chỉ và tránh cảnh báo tương thích của pg. Không commit file `.env` lên repository.
 
 Để upload ảnh lên Cloudinary, thêm các biến môi trường sau:
 

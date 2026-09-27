@@ -44,6 +44,7 @@ export class MenuStoreService {
     );
     return groupMenuItems(result.rows);
   }
+  //Lấy danh sách thông tin món ăn theo ID
   async getMenuItem(id: string) {
     const result = await this.database.query<MenuRow>(
       `${menuQuery} WHERE m.id = $1`,
@@ -51,11 +52,12 @@ export class MenuStoreService {
     );
     return groupMenuItems(result.rows)[0];
   }
+  //Tạo món ăn mới
   async createMenuItem(input: MenuInput) {
     const id = randomUUID();
     return this.database.transaction(async (client) => {
       await client.query(
-        'INSERT INTO menu_items (id, name, price, category, description, image, active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        'INSERT INTO menu_items (id, name, price, category, description, image, active) VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [
           id,
           input.name,
@@ -70,6 +72,7 @@ export class MenuStoreService {
       return getMenuItemWithClient(client, id);
     });
   }
+  //Cập nhật thông tin món ăn
   async updateMenuItem(id: string, input: Partial<MenuInput>) {
     return this.database.transaction(async (client) => {
       const fields: string[] = [];
@@ -105,6 +108,7 @@ export class MenuStoreService {
       return getMenuItemWithClient(client, id);
     });
   }
+  //Xóa món ăn (chỉ xóa những món đang hoạt động)
   async deleteMenuItem(id: string) {
     const result = await this.database.query(
       'UPDATE menu_items SET active = FALSE WHERE id = $1 AND active = TRUE RETURNING id',
