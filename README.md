@@ -84,9 +84,9 @@ Các quyền nghiệp vụ:
 | ----------------------- | --------------------- |
 | Xem và tạo đơn hàng     | ADMIN, MANAGER, STAFF |
 | Đổi trạng thái đơn hàng | ADMIN, MANAGER        |
-| Xem tồn kho             | ADMIN, MANAGER, STAFF |
-| Điều chỉnh tồn kho      | ADMIN, MANAGER        |
-| Xem báo cáo doanh thu   | ADMIN, MANAGER        |
+| Xem tồn kho và tổng quan     | ADMIN, MANAGER, STAFF |
+| Nhập, xuất, điều chỉnh tồn kho | ADMIN, MANAGER       |
+| Xem báo cáo doanh thu        | ADMIN, MANAGER        |
 
 ## API chính
 
@@ -120,7 +120,14 @@ Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `activ
 ### Inventory
 
 - `GET /api/inventory`
+- `GET /api/inventory/summary` (số mặt hàng, mặt hàng sắp hết/hết hàng, giá trị tồn kho)
+- `GET /api/inventory/low-stock` (nguyên liệu có tồn kho dưới hoặc bằng mức tối thiểu)
+- `GET /api/inventory/:id`
+- `POST /api/inventory/:id/stock-in` (ADMIN, MANAGER; body: `{"quantity": 10}`)
+- `POST /api/inventory/:id/stock-out` (ADMIN, MANAGER; body: `{"quantity": 2}`)
 - `PATCH /api/inventory/:id/adjust` (ADMIN, MANAGER)
+
+Số lượng nhập/xuất phải lớn hơn 0; xuất kho không được làm tồn kho âm. API điều chỉnh cũ tiếp tục nhận `delta` số nguyên khác 0.
 
 ### Reports
 
