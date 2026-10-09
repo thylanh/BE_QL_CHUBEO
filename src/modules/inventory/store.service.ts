@@ -7,7 +7,8 @@ export interface InventoryItem {
   unit: string;
   quantity: number;
   minQuantity: number;
-  image: string | null;
+  costPrice: number;
+  isLowStock?: boolean;
   updatedAt: string;
 }
 
@@ -17,14 +18,14 @@ export class InventoryStoreService {
 
   async listInventory() {
     const result = await this.database.query<InventoryItem>(
-      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", image, updated_at AS "updatedAt" FROM inventory ORDER BY name',
+      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory ORDER BY name',
     );
     return result.rows.map(normalizeInventory);
   }
 
   async getInventoryItem(id: string) {
     const result = await this.database.query<InventoryItem>(
-      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", image, updated_at AS "updatedAt" FROM inventory WHERE id = $1',
+      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE id = $1',
       [id],
     );
     return result.rows[0] && normalizeInventory(result.rows[0]);
@@ -32,7 +33,7 @@ export class InventoryStoreService {
 
   async adjustInventory(id: string, delta: number) {
     const result = await this.database.query<InventoryItem>(
-      'UPDATE inventory SET quantity = quantity + $2, updated_at = NOW() WHERE id = $1 AND quantity + $2 >= 0 RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", image, updated_at AS "updatedAt"',
+      'UPDATE inventory SET quantity = quantity + $2, updated_at = NOW() WHERE id = $1 AND quantity + $2 >= 0 RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
       [id, delta],
     );
     return result.rows[0] && normalizeInventory(result.rows[0]);
@@ -40,5 +41,9 @@ export class InventoryStoreService {
 }
 
 function normalizeInventory(item: InventoryItem) {
-  return { ...item, updatedAt: new Date(item.updatedAt).toISOString() };
+  return {
+    ...item,
+    isLowStock: item.quantity <= item.minQuantity,
+    updatedAt: new Date(item.updatedAt).toISOString(),
+  };
 }
