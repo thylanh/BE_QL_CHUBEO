@@ -21,6 +21,14 @@ export class InventoryController {
     return this.store.summary();
   }
 
+  @Get()
+  async list() {
+    return (await this.store.listInventory()).map((item) => ({
+      ...item,
+      lowStock: item.quantity <= item.minQuantity,
+    }));
+  }
+
   @Post()
   @Roles('ADMIN', 'MANAGER')
   async create(@Body() body: Partial<InventoryInput> = {}) {
