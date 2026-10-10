@@ -8,7 +8,6 @@ export interface InventoryInput {
   quantity?: number;
   minQuantity?: number;
   costPrice?: number;
-  image?: string | null;
 }
 
 export interface InventoryItem {
@@ -65,7 +64,7 @@ export class InventoryStoreService {
   async createInventoryItem(input: InventoryInput) {
     const id = randomUUID();
     const result = await this.database.query<InventoryItem>(
-      'INSERT INTO inventory (id, name, unit, quantity, min_quantity, cost_price, image, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
+      'INSERT INTO inventory (id, name, unit, quantity, min_quantity, cost_price, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
       [
         id,
         input.name,
@@ -73,7 +72,6 @@ export class InventoryStoreService {
         Number(input.quantity ?? 0),
         Number(input.minQuantity ?? 0),
         Number(input.costPrice ?? 0),
-        input.image ?? null,
       ],
     );
     return result.rows[0] && normalizeInventory(result.rows[0]);
