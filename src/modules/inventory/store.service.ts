@@ -1,5 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../../shared/database.service';
+
+export interface InventoryInput {
+  name: string;
+  unit: string;
+  quantity?: number;
+  minQuantity?: number;
+  costPrice?: number;
+  image?: string | null;
+}
 
 export interface InventoryItem {
   id: string;
@@ -37,6 +47,13 @@ export class InventoryStoreService {
     return result.rows.map(normalizeInventory);
   }
 
+  async lowStockInventory() {
+    const result = await this.database.query<InventoryItem>(
+      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE quantity <= min_quantity OR quantity <= 0 ORDER BY name',
+    );
+    return result.rows.map(normalizeInventory);
+  }
+
   async getInventoryItem(id: string) {
     const result = await this.database.query<InventoryItem>(
       'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE id = $1',
@@ -45,11 +62,29 @@ export class InventoryStoreService {
     return result.rows[0] && normalizeInventory(result.rows[0]);
   }
 
-  async lowStockInventory() {
+  async createInventoryItem(input: InventoryInput) {
+    const id = randomUUID();
     const result = await this.database.query<InventoryItem>(
-      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE quantity <= min_quantity ORDER BY quantity ASC, name',
+      'INSERT INTO inventory (id, name, unit, quantity, min_quantity, cost_price, image, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
+      [
+        id,
+        input.name,
+        input.unit,
+        Number(input.quantity ?? 0),
+        Number(input.minQuantity ?? 0),
+        Number(input.costPrice ?? 0),
+        input.image ?? null,
+      ],
     );
-    return result.rows.map(normalizeInventory);
+    return result.rows[0] && normalizeInventory(result.rows[0]);
+  }
+
+  async deleteInventoryItem(id: string) {
+    const result = await this.database.query<InventoryItem>(
+      'DELETE FROM inventory WHERE id = $1 RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
+      [id],
+    );
+    return result.rows[0] && normalizeInventory(result.rows[0]);
   }
 
   async adjustInventory(id: string, delta: number) {

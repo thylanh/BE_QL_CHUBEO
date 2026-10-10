@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -9,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard, Roles } from '../auth/auth.guard';
-import { InventoryStoreService } from './store.service';
+import { InventoryInput, InventoryStoreService } from './store.service';
 
 @Controller('inventory')
 @UseGuards(AuthGuard)
@@ -22,8 +23,11 @@ export class InventoryController {
   }
 
   @Get('low-stock')
-  lowStock() {
-    return this.store.lowStockInventory();
+  async lowStock() {
+    return (await this.store.lowStockInventory()).map((item) => ({
+      ...item,
+      lowStock: item.quantity <= item.minQuantity,
+    }));
   }
 
   @Get()
@@ -34,9 +38,24 @@ export class InventoryController {
     }));
   }
 
+  @Post()
+  @Roles('ADMIN', 'MANAGER')
+  async create(@Body() body: Partial<InventoryInput> = {}) {
+    const item = await this.store.createInventoryItem(validateInventoryInput(body, false));
+    return { ...item, lowStock: item.quantity <= item.minQuantity };
+  }
+
   @Get(':id')
   async get(@Param('id') id: string) {
     const item = await this.store.getInventoryItem(id);
+    if (!item) throw new BadRequestException('Không tìm thấy nguyên liệu');
+    return { ...item, lowStock: item.quantity <= item.minQuantity };
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN', 'MANAGER')
+  async remove(@Param('id') id: string) {
+    const item = await this.store.deleteInventoryItem(id);
     if (!item) throw new BadRequestException('Không tìm thấy nguyên liệu');
     return { ...item, lowStock: item.quantity <= item.minQuantity };
   }
@@ -89,4 +108,46 @@ export class InventoryController {
       lowStock: updated.quantity <= updated.minQuantity,
     };
   }
+}
+
+function validateInventoryInput(
+  body: Partial<InventoryInput>,
+  partial: boolean,
+): InventoryInput {
+  const name = body.name?.trim();
+  if (!partial && !name) throw new BadRequestException('Tên nguyên liệu là bắt buộc');
+  if (name !== undefined && !name)
+    throw new BadRequestException('Tên nguyên liệu không được để trống');
+
+  const unit = body.unit?.trim();
+  if (!partial && !unit) throw new BadRequestException('Đơn vị tính là bắt buộc');
+  if (unit !== undefined && !unit)
+    throw new BadRequestException('Đơn vị tính không được để trống');
+
+  const quantity = body.quantity === undefined ? undefined : Number(body.quantity);
+  if (quantity !== undefined && (!Number.isFinite(quantity) || quantity < 0))
+    throw new BadRequestException('Số lượng tồn phải là số không âm');
+
+  const minQuantity =
+    body.minQuantity === undefined ? undefined : Number(body.minQuantity);
+  if (minQuantity !== undefined && (!Number.isFinite(minQuantity) || minQuantity < 0))
+    throw new BadRequestException('Mức cảnh báo phải là số không âm');
+
+  const costPrice =
+    body.costPrice === undefined ? undefined : Number(body.costPrice);
+  if (costPrice !== undefined && (!Number.isFinite(costPrice) || costPrice < 0))
+    throw new BadRequestException('Giá vốn phải là số không âm');
+
+  if (body.image !== undefined && typeof body.image !== 'string' && body.image !== null)
+    throw new BadRequestException('image phải là chuỗi hoặc null');
+
+  return {
+    ...body,
+    ...(name === undefined ? {} : { name }),
+    ...(unit === undefined ? {} : { unit }),
+    ...(quantity === undefined ? {} : { quantity }),
+    ...(minQuantity === undefined ? {} : { minQuantity }),
+    ...(costPrice === undefined ? {} : { costPrice }),
+    ...(body.image === undefined ? {} : { image: body.image ?? null }),
+  } as InventoryInput;
 }

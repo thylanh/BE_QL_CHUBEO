@@ -121,13 +121,11 @@ Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `activ
 
 - `GET /api/inventory`
 - `GET /api/inventory/summary` (số mặt hàng, mặt hàng sắp hết/hết hàng, giá trị tồn kho)
-- `GET /api/inventory/low-stock` (nguyên liệu có tồn kho dưới hoặc bằng mức tối thiểu)
 - `GET /api/inventory/:id`
+- `POST /api/inventory` (ADMIN, MANAGER; body: `{"name":"Bún","unit":"kg","quantity":10,"minQuantity":2,"costPrice":25000}`)
+- `DELETE /api/inventory/:id` (ADMIN, MANAGER)
 - `POST /api/inventory/:id/stock-in` (ADMIN, MANAGER; body: `{"quantity": 10}`)
 - `POST /api/inventory/:id/stock-out` (ADMIN, MANAGER; body: `{"quantity": 2}`)
-- `PATCH /api/inventory/:id/adjust` (ADMIN, MANAGER)
-
-Số lượng nhập/xuất phải lớn hơn 0; xuất kho không được làm tồn kho âm. API điều chỉnh cũ tiếp tục nhận `delta` số nguyên khác 0.
 
 ### Reports
 
