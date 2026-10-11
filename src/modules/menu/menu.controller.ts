@@ -20,9 +20,7 @@ export class MenuController {
   @Get() list(@Query('active') active?: string) {
     if (active !== undefined && active !== 'true' && active !== 'false')
       throw new BadRequestException('active phải là true hoặc false');
-    return this.store.listMenuItems(
-      active === undefined ? undefined : active === 'true',
-    );
+    return this.store.listMenuItems();
   }
   @Get(':id') async get(@Param('id') id: string) {
     const item = await this.store.getMenuItem(id);
@@ -51,16 +49,6 @@ export class MenuController {
     const item = await this.store.deleteMenuItem(id);
     if (!item)
       throw new BadRequestException('Không tìm thấy món đang hoạt động');
-    return item;
-  }
-  @Patch(':id/active') @Roles('ADMIN', 'MANAGER') async updateActive(
-    @Param('id') id: string,
-    @Body('active') active: boolean,
-  ) {
-    if (typeof active !== 'boolean')
-      throw new BadRequestException('active phải là boolean');
-    const item = await this.store.updateMenuItemActive(id, active);
-    if (!item) throw new BadRequestException('Không tìm thấy món');
     return item;
   }
 }
