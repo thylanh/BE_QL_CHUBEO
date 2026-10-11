@@ -6,12 +6,12 @@ import { DatabaseService } from '../../shared/database.service';
 export interface MenuIngredient {
   ingredient_id: string;
   amount: number;
+  quantity: number;
 }
 export interface MenuItem {
   id: string;
   name: string;
   price: number;
-  ingredients: Record<string, number>;
   created_at: string;
   category: string | null;
   description: string | null;
@@ -19,7 +19,8 @@ export interface MenuItem {
   menu_item_ingredients: MenuIngredient[];
   active: boolean;
 }
-type MenuRow = Omit<MenuItem, 'ingredients' | 'menu_item_ingredients'> & {
+
+type MenuRow = Omit<MenuItem, 'menu_item_ingredients'> & {
   ingredient_id?: string;
   amount?: number;
 };
@@ -153,7 +154,6 @@ function groupMenuItems(rows: MenuRow[]) {
       id: row.id,
       name: row.name,
       price: Number(row.price),
-      ingredients: {},
       created_at: new Date(row.created_at).toISOString(),
       category: row.category ?? null,
       description: row.description ?? null,
@@ -162,12 +162,13 @@ function groupMenuItems(rows: MenuRow[]) {
       active: row.active,
     };
     if (row.ingredient_id) {
-      item.ingredients[row.ingredient_id] = Number(row.amount);
       item.menu_item_ingredients.push({
         ingredient_id: row.ingredient_id,
         amount: Number(row.amount),
+        quantity: Number(row.amount),
       });
     }
+
     items.set(row.id, item);
   }
   return [...items.values()];
