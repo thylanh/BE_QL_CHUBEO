@@ -42,14 +42,12 @@ const menuQuery = `SELECT m.id, m.name, m.price::float8, m.category, m.descripti
 @Injectable()
 export class MenuStoreService {
   constructor(private readonly database: DatabaseService) {}
-  async listMenuItems(active?: boolean) {
+  async listMenuItems() {
     const result = await this.database.query<MenuRow>(
       `${menuQuery} ORDER BY m.name`,
     );
     const items = groupMenuItems(result.rows);
-    return active === undefined
-      ? items
-      : items.filter((item) => item.active === active);
+    return items;
   }
   //Lấy danh sách thông tin món ăn theo ID
   async getMenuItem(id: string) {
@@ -72,7 +70,6 @@ export class MenuStoreService {
           input.category ?? null,
           input.description ?? null,
           input.image ?? null,
-          input.active ?? true,
         ],
       );
       await replaceIngredients(client, id, input.ingredients ?? []);
@@ -95,7 +92,6 @@ export class MenuStoreService {
       if (input.description !== undefined)
         setField('description', input.description ?? null);
       if (input.image !== undefined) setField('image', input.image ?? null);
-      if (input.active !== undefined) setField('active', input.active);
       if (fields.length) {
         values.push(id);
         const result = await client.query(
@@ -115,14 +111,7 @@ export class MenuStoreService {
       return getMenuItemWithClient(client, id);
     });
   }
-  //Cập nhật trạng thái món ăn (active)
-  async updateMenuItemActive(id: string, active: boolean) {
-    const result = await this.database.query(
-      'UPDATE menu_items SET active = $1 WHERE id = $2 RETURNING id',
-      [active, id],
-    );
-    return result.rowCount ? this.getMenuItem(id) : undefined;
-  }
+
   //Xóa món ăn
   async deleteMenuItem(id: string) {
     const result = await this.database.query(
