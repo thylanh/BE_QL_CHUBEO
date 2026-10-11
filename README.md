@@ -115,7 +115,7 @@ Các quyền nghiệp vụ:
 - `PATCH /api/menu/:id/active` (ADMIN, MANAGER)
 - `DELETE /api/menu/:id` (ADMIN, MANAGER)
 
-Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `active` và danh sách `ingredients`. Mỗi nguyên liệu trả về có `amount` (định mức dùng cho một món) và `quantity` (tồn kho hiện tại) để kiểm tra khả năng phục vụ món; khi tạo/cập nhật chỉ cần gửi `ingredient_id` và `amount`. Xóa món là soft-delete bằng cách đặt `active = false` để không ảnh hưởng các đơn hàng cũ.
+Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `active` và danh sách `ingredients`. Mỗi nguyên liệu trả về có `amount` (định mức dùng cho một món) và `quantity` (tồn kho hiện tại). `active` trả về `false` khi món bị tắt thủ công hoặc bất kỳ nguyên liệu nào không đủ định mức; khi nhập thêm tồn kho, trạng thái khả dụng tự cập nhật mà không cần bật lại món. Khi tạo/cập nhật chỉ cần gửi `ingredient_id` và `amount`. Xóa món là soft-delete bằng cách đặt `active = false` để không ảnh hưởng các đơn hàng cũ.
 
 ### Inventory
 

@@ -8,6 +8,10 @@ export interface MenuIngredient {
   amount: number;
   quantity: number;
 }
+export interface MenuIngredientInput {
+  ingredient_id: string;
+  amount: number;
+}
 export interface MenuItem {
   id: string;
   name: string;
@@ -19,7 +23,6 @@ export interface MenuItem {
   menu_item_ingredients: MenuIngredient[];
   active: boolean;
 }
-
 type MenuRow = Omit<MenuItem, 'menu_item_ingredients'> & {
   ingredient_id?: string;
   amount?: number;
@@ -32,7 +35,7 @@ export interface MenuInput {
   description?: string | null;
   image?: string | null;
   active?: boolean;
-  ingredients?: MenuIngredient[];
+  ingredients?: MenuIngredientInput[];
 }
 const menuQuery = `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount::float8, COALESCE(i.quantity, 0)::float8 AS quantity FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id LEFT JOIN inventory i ON i.id = mi.ingredient_id`;
 
@@ -41,10 +44,12 @@ export class MenuStoreService {
   constructor(private readonly database: DatabaseService) {}
   async listMenuItems(active?: boolean) {
     const result = await this.database.query<MenuRow>(
-      `${menuQuery}${active === undefined ? '' : ' WHERE m.active = $1'} ORDER BY m.name`,
-      active === undefined ? undefined : [active],
+      `${menuQuery} ORDER BY m.name`,
     );
-    return groupMenuItems(result.rows);
+    const items = groupMenuItems(result.rows);
+    return active === undefined
+      ? items
+      : items.filter((item) => item.active === active);
   }
   //Lấy danh sách thông tin món ăn theo ID
   async getMenuItem(id: string) {
@@ -136,7 +141,7 @@ async function getMenuItemWithClient(client: PoolClient, id: string) {
 async function replaceIngredients(
   client: PoolClient,
   menuItemId: string,
-  ingredients: MenuIngredient[],
+  ingredients: MenuIngredientInput[],
 ) {
   await client.query(
     'DELETE FROM menu_item_ingredients WHERE menu_item_id = $1',
@@ -150,7 +155,6 @@ async function replaceIngredients(
 }
 function groupMenuItems(rows: MenuRow[]) {
   const items = new Map<string, MenuItem>();
-
   for (const row of rows) {
     const item = items.get(row.id) ?? {
       id: row.id,
@@ -163,7 +167,6 @@ function groupMenuItems(rows: MenuRow[]) {
       menu_item_ingredients: [],
       active: row.active,
     };
-
     if (row.ingredient_id) {
       item.menu_item_ingredients.push({
         ingredient_id: row.ingredient_id,
@@ -171,9 +174,14 @@ function groupMenuItems(rows: MenuRow[]) {
         quantity: Number(row.quantity),
       });
     }
-
     items.set(row.id, item);
   }
-
-  return [...items.values()];
+  return [...items.values()].map((item) => {
+    item.active =
+      item.active &&
+      item.menu_item_ingredients.every(
+        (ingredient) => ingredient.quantity >= ingredient.amount,
+      );
+    return item;
+  });
 }
