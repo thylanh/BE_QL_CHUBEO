@@ -34,7 +34,7 @@ export interface MenuInput {
   active?: boolean;
   ingredients?: MenuIngredient[];
 }
-const menuQuery = `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount::float8 FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id`;
+const menuQuery = `SELECT m.id, m.name, m.price::float8, m.category, m.description, m.image, m.created_at, m.active, mi.ingredient_id, mi.amount::float8, COALESCE(i.quantity, 0)::float8 AS quantity FROM menu_items m LEFT JOIN menu_item_ingredients mi ON mi.menu_item_id = m.id LEFT JOIN inventory i ON i.id = mi.ingredient_id`;
 
 @Injectable()
 export class MenuStoreService {
@@ -150,6 +150,7 @@ async function replaceIngredients(
 }
 function groupMenuItems(rows: MenuRow[]) {
   const items = new Map<string, MenuItem>();
+
   for (const row of rows) {
     const item = items.get(row.id) ?? {
       id: row.id,
@@ -162,6 +163,7 @@ function groupMenuItems(rows: MenuRow[]) {
       menu_item_ingredients: [],
       active: row.active,
     };
+
     if (row.ingredient_id) {
       item.menu_item_ingredients.push({
         ingredient_id: row.ingredient_id,
@@ -172,5 +174,6 @@ function groupMenuItems(rows: MenuRow[]) {
 
     items.set(row.id, item);
   }
+
   return [...items.values()];
 }
