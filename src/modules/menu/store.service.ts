@@ -23,6 +23,7 @@ export interface MenuItem {
 type MenuRow = Omit<MenuItem, 'menu_item_ingredients'> & {
   ingredient_id?: string;
   amount?: number;
+  quantity?: number;
 };
 export interface MenuInput {
   name: string;
@@ -165,7 +166,7 @@ function groupMenuItems(rows: MenuRow[]) {
       item.menu_item_ingredients.push({
         ingredient_id: row.ingredient_id,
         amount: Number(row.amount),
-        quantity: Number(row.amount),
+        quantity: Number(row.quantity),
       });
     }
 
