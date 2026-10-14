@@ -16,11 +16,6 @@ import { InventoryInput, InventoryStoreService } from './store.service';
 export class InventoryController {
   constructor(private readonly store: InventoryStoreService) {}
 
-  @Get('summary')
-  summary() {
-    return this.store.summary();
-  }
-
   @Get()
   async list() {
     return (await this.store.listInventory()).map((item) => ({
@@ -104,6 +99,14 @@ function validateInventoryInput(
     throw new BadRequestException('Đơn vị tính là bắt buộc');
   if (unit !== undefined && !unit)
     throw new BadRequestException('Đơn vị tính không được để trống');
+
+  const conversionUnit =
+    body.conversionUnit === undefined ? undefined : Number(body.conversionUnit);
+  if (
+    conversionUnit !== undefined &&
+    (!Number.isFinite(conversionUnit) || conversionUnit <= 0)
+  )
+    throw new BadRequestException('Đơn vị quy đổi phải là số dương');
 
   const quantity =
     body.quantity === undefined ? undefined : Number(body.quantity);

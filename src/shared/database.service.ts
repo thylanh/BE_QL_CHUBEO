@@ -40,16 +40,17 @@ export class DatabaseService implements OnModuleDestroy, OnModuleInit {
         'Missing DATABASE_URL or DATABASE_URL_POOLED environment variable',
       );
     }
-
     const result = await this.query(
       "SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public'",
     );
-
     if (result.rowCount === 0) {
       await this.query(bootstrapSql);
     } else {
       await this.query(
         'ALTER TABLE inventory ADD COLUMN IF NOT EXISTS image TEXT',
+      );
+      await this.query(
+        'ALTER TABLE inventory ADD COLUMN IF NOT EXISTS conversion_unit NUMERIC(10, 2) DEFAULT 1',
       );
       await this.query(
         'ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image TEXT',
