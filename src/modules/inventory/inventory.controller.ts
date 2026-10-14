@@ -100,14 +100,6 @@ function validateInventoryInput(
   if (unit !== undefined && !unit)
     throw new BadRequestException('Đơn vị tính không được để trống');
 
-  const conversionUnit =
-    body.conversionUnit === undefined ? undefined : Number(body.conversionUnit);
-  if (
-    conversionUnit !== undefined &&
-    (!Number.isFinite(conversionUnit) || conversionUnit <= 0)
-  )
-    throw new BadRequestException('Đơn vị quy đổi phải là số dương');
-
   const quantity =
     body.quantity === undefined ? undefined : Number(body.quantity);
   if (quantity !== undefined && (!Number.isFinite(quantity) || quantity < 0))

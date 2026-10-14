@@ -1,7 +1,5 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
-
-const bootstrapSql = ``;
 
 function normalizeDatabaseUrl(connectionString?: string) {
   if (!connectionString) return connectionString;
@@ -19,7 +17,7 @@ function normalizeDatabaseUrl(connectionString?: string) {
 }
 
 @Injectable()
-export class DatabaseService implements OnModuleDestroy, OnModuleInit {
+export class DatabaseService implements OnModuleDestroy {
   private readonly databaseUrl = normalizeDatabaseUrl(
     process.env.DATABASE_URL ?? process.env.DATABASE_URL_POOLED,
   );
@@ -33,33 +31,6 @@ export class DatabaseService implements OnModuleDestroy, OnModuleInit {
         ? { rejectUnauthorized: false }
         : undefined,
   });
-
-  async onModuleInit() {
-    if (!this.databaseUrl) {
-      throw new Error(
-        'Missing DATABASE_URL or DATABASE_URL_POOLED environment variable',
-      );
-    }
-    const result = await this.query(
-      "SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public'",
-    );
-    if (result.rowCount === 0) {
-      await this.query(bootstrapSql);
-    } else {
-      await this.query(
-        'ALTER TABLE inventory ADD COLUMN IF NOT EXISTS image TEXT',
-      );
-      await this.query(
-        'ALTER TABLE inventory ADD COLUMN IF NOT EXISTS conversion_unit NUMERIC(10, 2) DEFAULT 1',
-      );
-      await this.query(
-        'ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image TEXT',
-      );
-      await this.query(
-        'ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ',
-      );
-    }
-  }
 
   query<Row extends QueryResultRow = QueryResultRow>(
     text: string,
