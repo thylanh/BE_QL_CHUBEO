@@ -5,17 +5,21 @@ import {
   Get,
   Param,
   Patch,
-  // Post,
+  Post,
   Body,
-  // Req,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthGuard, Roles } from '../auth/auth.guard';
-// import { User } from '../../shared/store.service';
-import { OrderStatus, OrdersStoreService } from './store.service';
+import { User } from '../../shared/store.service';
+import {
+  CreateOrderInput,
+  OrderStatus,
+  OrdersStoreService,
+} from './store.service';
 
-// type AuthenticatedRequest = Request & { user: User };
+type AuthenticatedRequest = Request & { user: User };
 
 @Controller('orders')
 @UseGuards(AuthGuard)
@@ -25,6 +29,18 @@ export class OrdersController {
   @Get()
   list() {
     return this.store.listOrders();
+  }
+
+  @Post()
+  @Roles('ADMIN', 'MANAGER', 'STAFF')
+  create(
+    @Body() body: Partial<CreateOrderInput> = {},
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.store.createOrder(
+      validateCreateOrderInput(body),
+      request.user.id,
+    );
   }
 
   @Patch(':id/status')
@@ -54,4 +70,49 @@ export class OrdersController {
       throw new ConflictException('Không thể thay đổi đơn đã kết thúc');
     return this.store.updateOrderStatus(id, status);
   }
+}
+
+function validateCreateOrderInput(
+  body: Partial<CreateOrderInput>,
+): CreateOrderInput {
+  const payload = body ?? {};
+  const table = payload.table ?? '';
+  if (typeof table !== 'string')
+    throw new BadRequestException('table phải là chuỗi');
+
+  const orderTypes = ['Tại quán', 'Mang đi', 'Giao hàng'] as const;
+  const orderType = payload.orderType ?? 'Tại quán';
+  if (!orderTypes.includes(orderType))
+    throw new BadRequestException('Loại đơn hàng không hợp lệ');
+
+  if (!Array.isArray(payload.lines) || payload.lines.length === 0)
+    throw new BadRequestException('Đơn hàng phải có ít nhất một món');
+  const lines = payload.lines.map((line) => {
+    const menuItemId =
+      typeof line?.menuItemId === 'string' ? line.menuItemId.trim() : '';
+    const quantity = line?.quantity;
+    if (!menuItemId || !Number.isInteger(quantity) || quantity <= 0)
+      throw new BadRequestException(
+        'Mỗi món phải có menuItemId và quantity là số nguyên dương',
+      );
+    return { menuItemId, quantity };
+  });
+
+  const customerCount = payload.customerCount ?? 1;
+  if (
+    typeof customerCount !== 'number' ||
+    !Number.isInteger(customerCount) ||
+    customerCount < 0
+  )
+    throw new BadRequestException('customerCount phải là số nguyên không âm');
+  if (payload.note !== undefined && typeof payload.note !== 'string')
+    throw new BadRequestException('note phải là chuỗi');
+
+  return {
+    table: table.trim(),
+    orderType,
+    lines,
+    customerCount,
+    ...(payload.note?.trim() ? { note: payload.note.trim() } : {}),
+  };
 }

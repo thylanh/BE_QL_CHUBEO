@@ -106,6 +106,22 @@ Các quyền nghiệp vụ:
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
 
+`POST /api/orders` (ADMIN, MANAGER, STAFF) nhận body:
+
+```json
+{
+  "table": "Bàn 1",
+  "orderType": "Tại quán",
+  "customerCount": 2,
+  "note": "Ít cay",
+  "lines": [
+    { "menuItemId": "550e8400-e29b-41d4-a716-446655440000", "quantity": 2 }
+  ]
+}
+```
+
+`table`, `orderType`, `customerCount` và `note` có thể bỏ qua; mặc định lần lượt là chuỗi rỗng, `Tại quán`, `1` và không có ghi chú. Giá món và tổng tiền được tính từ thực đơn trong database, phí dịch vụ hiện là `0`. API kiểm tra món còn hoạt động và đủ tồn kho, sau đó tạo đơn cùng chi tiết và trừ nguyên liệu trong cùng transaction.
+
 ### Menu
 
 - `GET /api/menu?active=true|false`
