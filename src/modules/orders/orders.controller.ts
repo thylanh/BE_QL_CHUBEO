@@ -105,6 +105,13 @@ function validateCreateOrderInput(
     customerCount < 0
   )
     throw new BadRequestException('customerCount phải là số nguyên không âm');
+  const serviceFee = payload.serviceFee;
+  if (
+    typeof serviceFee !== 'number' ||
+    !Number.isFinite(serviceFee) ||
+    serviceFee < 0
+  )
+    throw new BadRequestException('serviceFee phải là số không âm');
   if (payload.note !== undefined && typeof payload.note !== 'string')
     throw new BadRequestException('note phải là chuỗi');
 
@@ -113,6 +120,7 @@ function validateCreateOrderInput(
     orderType,
     lines,
     customerCount,
+    serviceFee,
     ...(payload.note?.trim() ? { note: payload.note.trim() } : {}),
   };
 }

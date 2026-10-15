@@ -41,6 +41,7 @@ export interface CreateOrderInput {
   }>;
   customerCount: number;
   note?: string;
+  serviceFee: number;
 }
 
 type OrderRow = Order & { line: OrderItem };
@@ -58,7 +59,7 @@ export class OrdersStoreService {
   //tạo đơn hàng mới
   async createOrder(input: CreateOrderInput, createdBy: string) {
     const id = randomUUID();
-    const serviceFee = 0;
+    const serviceFee = input.serviceFee;
     const orderLines = new Map<string, number>();
     for (const line of input.lines)
       orderLines.set(

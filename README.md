@@ -113,6 +113,7 @@ Các quyền nghiệp vụ:
   "table": "Bàn 1",
   "orderType": "Tại quán",
   "customerCount": 2,
+  "serviceFee": 5000,
   "note": "Ít cay",
   "lines": [
     { "menuItemId": "550e8400-e29b-41d4-a716-446655440000", "quantity": 2 }
@@ -120,7 +121,7 @@ Các quyền nghiệp vụ:
 }
 ```
 
-`table`, `orderType`, `customerCount` và `note` có thể bỏ qua; mặc định lần lượt là chuỗi rỗng, `Tại quán`, `1` và không có ghi chú. Giá món và tổng tiền được tính từ thực đơn trong database, phí dịch vụ hiện là `0`. API kiểm tra món còn hoạt động và đủ tồn kho, sau đó tạo đơn cùng chi tiết và trừ nguyên liệu trong cùng transaction.
+`table`, `orderType`, `customerCount` và `note` có thể bỏ qua; mặc định lần lượt là chuỗi rỗng, `Tại quán`, `1` và không có ghi chú. Frontend phải gửi `serviceFee` là số không âm. Giá món và subtotal được tính từ thực đơn trong database; tổng tiền bằng subtotal cộng `serviceFee`. API kiểm tra món còn hoạt động và đủ tồn kho, sau đó tạo đơn cùng chi tiết và trừ nguyên liệu trong cùng transaction.
 
 ### Menu
 
