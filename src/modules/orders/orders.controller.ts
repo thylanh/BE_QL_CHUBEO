@@ -95,7 +95,26 @@ function validateCreateOrderInput(
       throw new BadRequestException(
         'Mỗi món phải có menuItemId và quantity là số nguyên dương',
       );
-    return { menuItemId, quantity };
+    if (!Array.isArray(line.ingredients))
+      throw new BadRequestException('Mỗi món phải có danh sách ingredients');
+    const ingredients = line.ingredients.map((ingredient) => {
+      const ingredientId =
+        typeof ingredient?.ingredientId === 'string'
+          ? ingredient.ingredientId.trim()
+          : '';
+      const amount = ingredient?.amount;
+      if (
+        !ingredientId ||
+        typeof amount !== 'number' ||
+        !Number.isFinite(amount) ||
+        amount <= 0
+      )
+        throw new BadRequestException(
+          'Mỗi nguyên liệu phải có ingredientId và amount là số dương',
+        );
+      return { ingredientId, amount };
+    });
+    return { menuItemId, quantity, ingredients };
   });
 
   const customerCount = payload.customerCount;

@@ -116,12 +116,20 @@ Các quyền nghiệp vụ:
   "serviceFee": 5000,
   "note": "Ít cay",
   "lines": [
-    { "menuItemId": "550e8400-e29b-41d4-a716-446655440000", "quantity": 2 }
+    {
+      "menuItemId": "550e8400-e29b-41d4-a716-446655440000",
+      "quantity": 2,
+      "ingredients": [
+        { "ingredientId": "550e8400-e29b-41d4-a716-446655440001", "amount": 0.2 }
+      ]
+    }
   ]
 }
 ```
 
 `table`, `orderType` và `note` có thể bỏ qua; mặc định lần lượt là chuỗi rỗng, `Tại quán` và không có ghi chú. Frontend bắt buộc gửi `customerCount` dưới dạng số nguyên không âm và `serviceFee` dưới dạng số không âm. Giá món và subtotal được tính từ thực đơn trong database; tổng tiền bằng subtotal cộng `serviceFee`. API kiểm tra món còn hoạt động và đủ tồn kho, sau đó tạo đơn cùng chi tiết và trừ nguyên liệu trong cùng transaction.
+
+Mỗi phần tử `lines` khi tạo đơn bắt buộc có `ingredients`, gồm các phần tử `{ ingredientId, amount }` theo định mức dùng cho một món. API đối chiếu danh sách này với công thức trong database; dữ liệu sai hoặc cũ sẽ bị từ chối. Tồn kho vẫn được tính/trừ theo công thức trong database. Mỗi phần tử `lines` trong response đơn hàng có thêm `total` và `ingredients`.
 
 Mã đơn `code` được BE lấy từ nhóm thứ tư của UUID `id` (ví dụ `d913b844-a4af-44da-acb4-70ec90234155` → `acb4`) và lưu vào `orders.code`. Chạy migration `migrations/20261016_add_orders_code.sql` một lần để đảm bảo cột tồn tại, có dữ liệu cho các đơn cũ và có ràng buộc `NOT NULL`/`UNIQUE`.
 

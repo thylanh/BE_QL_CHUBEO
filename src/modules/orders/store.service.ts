@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -8,11 +9,17 @@ import { DatabaseService } from '../../shared/database.service';
 
 export type OrderStatus =
   'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
+export interface OrderIngredient {
+  ingredientId: string;
+  amount: number;
+}
 export interface OrderItem {
   menuItemId: string;
   name: string;
   price: number;
   quantity: number;
+  total: number;
+  ingredients: OrderIngredient[];
 }
 export interface Order {
   id: string;
@@ -32,13 +39,13 @@ export interface Order {
   completedAt?: string;
   cancelledAt?: string;
 }
-
 export interface CreateOrderInput {
   table: string;
   orderType: Order['orderType'];
   lines: Array<{
     menuItemId: string;
     quantity: number;
+    ingredients: OrderIngredient[];
   }>;
   customerCount: number;
   note?: string;
@@ -47,7 +54,7 @@ export interface CreateOrderInput {
 
 type OrderRow = Omit<Order, 'lines'> & { line: OrderItem | null };
 
-const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
+const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8, 'ingredients', COALESCE((SELECT json_agg(json_build_object('ingredientId', mii.ingredient_id, 'amount', mii.amount::float8) ORDER BY mii.ingredient_id) FROM menu_item_ingredients mii WHERE mii.menu_item_id = oi.menu_item_id), '[]'::json)) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
 
 @Injectable()
 export class OrdersStoreService {
@@ -94,7 +101,16 @@ export class OrdersStoreService {
       );
       const ingredientDemand = new Map<string, number>();
       const ingredientStock = new Map<string, number>();
+      const ingredientsByMenuItem = new Map<string, OrderIngredient[]>();
       for (const recipe of recipeResult.rows) {
+        const ingredients =
+          ingredientsByMenuItem.get(recipe.menu_item_id) ?? [];
+        ingredients.push({
+          ingredientId: recipe.ingredient_id,
+          amount: Number(recipe.amount),
+        });
+        ingredientsByMenuItem.set(recipe.menu_item_id, ingredients);
+
         const amount =
           Number(recipe.amount) * (orderLines.get(recipe.menu_item_id) ?? 0);
         ingredientDemand.set(
@@ -102,6 +118,28 @@ export class OrdersStoreService {
           (ingredientDemand.get(recipe.ingredient_id) ?? 0) + amount,
         );
         ingredientStock.set(recipe.ingredient_id, Number(recipe.quantity));
+      }
+      for (const line of input.lines) {
+        const actualIngredients =
+          ingredientsByMenuItem.get(line.menuItemId) ?? [];
+        const providedIngredients = [...line.ingredients].sort((a, b) =>
+          a.ingredientId.localeCompare(b.ingredientId),
+        );
+        const sortedActualIngredients = [...actualIngredients].sort((a, b) =>
+          a.ingredientId.localeCompare(b.ingredientId),
+        );
+        if (
+          providedIngredients.length !== sortedActualIngredients.length ||
+          providedIngredients.some(
+            (ingredient, index) =>
+              ingredient.ingredientId !==
+                sortedActualIngredients[index].ingredientId ||
+              ingredient.amount !== sortedActualIngredients[index].amount,
+          )
+        )
+          throw new BadRequestException(
+            `Danh sách nguyên liệu của món "${line.menuItemId}" không khớp công thức`,
+          );
       }
       for (const [ingredientId, amount] of ingredientDemand) {
         if ((ingredientStock.get(ingredientId) ?? 0) < amount)
@@ -117,6 +155,8 @@ export class OrdersStoreService {
             name: menuItem.name,
             price: Number(menuItem.price),
             quantity,
+            total: Number(menuItem.price) * quantity,
+            ingredients: ingredientsByMenuItem.get(menuItemId) ?? [],
           };
         },
       );
@@ -156,7 +196,7 @@ export class OrdersStoreService {
             line.name,
             line.quantity,
             line.price,
-            line.price * line.quantity,
+            line.total,
           ],
         );
 
