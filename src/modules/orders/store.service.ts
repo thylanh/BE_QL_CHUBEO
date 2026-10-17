@@ -17,6 +17,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   table: string;
+  code: string;
   orderType: 'Tại quán' | 'Mang đi' | 'Giao hàng';
   lines: OrderItem[];
   customerCount: number;
@@ -44,9 +45,9 @@ export interface CreateOrderInput {
   serviceFee: number;
 }
 
-type OrderRow = Order & { line: OrderItem };
+type OrderRow = Omit<Order, 'lines'> & { line: OrderItem | null };
 
-const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8) AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
+const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
 
 @Injectable()
 export class OrdersStoreService {
@@ -129,10 +130,12 @@ export class OrdersStoreService {
           [ingredientId, amount],
         );
 
+      const code = 'HD' + '-' + id.split('-')[3];
       await client.query(
-        'INSERT INTO orders (id, table_name, order_type, customer_count, total, service_fee, status, note, inventory_deducted, created_by, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, $9, NOW(), NOW())',
+        'INSERT INTO orders (id, code, table_name, order_type, customer_count, total, service_fee, status, note, inventory_deducted, created_by, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())',
         [
           id,
+          code,
           input.table,
           input.orderType,
           input.customerCount,
@@ -140,6 +143,7 @@ export class OrdersStoreService {
           serviceFee,
           'PENDING',
           input.note ?? null,
+          true,
           createdBy,
         ],
       );
@@ -229,6 +233,7 @@ function groupOrders(rows: OrderRow[]) {
   for (const row of rows) {
     const order = orders.get(row.id) ?? {
       id: row.id,
+      code: 'HD' + '-' + row.id.split('-')[3],
       table: row.table,
       orderType: row.orderType,
       lines: [],

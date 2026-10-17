@@ -98,13 +98,14 @@ function validateCreateOrderInput(
     return { menuItemId, quantity };
   });
 
-  const customerCount = payload.customerCount ?? 1;
+  const customerCount = payload.customerCount;
   if (
     typeof customerCount !== 'number' ||
     !Number.isInteger(customerCount) ||
     customerCount < 0
-  )
-    throw new BadRequestException('customerCount phải là số nguyên không âm');
+  ) {
+    throw new BadRequestException();
+  }
   const serviceFee = payload.serviceFee;
   if (
     typeof serviceFee !== 'number' ||

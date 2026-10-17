@@ -121,7 +121,9 @@ Các quyền nghiệp vụ:
 }
 ```
 
-`table`, `orderType`, `customerCount` và `note` có thể bỏ qua; mặc định lần lượt là chuỗi rỗng, `Tại quán`, `1` và không có ghi chú. Frontend phải gửi `serviceFee` là số không âm. Giá món và subtotal được tính từ thực đơn trong database; tổng tiền bằng subtotal cộng `serviceFee`. API kiểm tra món còn hoạt động và đủ tồn kho, sau đó tạo đơn cùng chi tiết và trừ nguyên liệu trong cùng transaction.
+`table`, `orderType` và `note` có thể bỏ qua; mặc định lần lượt là chuỗi rỗng, `Tại quán` và không có ghi chú. Frontend bắt buộc gửi `customerCount` dưới dạng số nguyên không âm và `serviceFee` dưới dạng số không âm. Giá món và subtotal được tính từ thực đơn trong database; tổng tiền bằng subtotal cộng `serviceFee`. API kiểm tra món còn hoạt động và đủ tồn kho, sau đó tạo đơn cùng chi tiết và trừ nguyên liệu trong cùng transaction.
+
+Mã đơn `code` được BE lấy từ nhóm thứ tư của UUID `id` (ví dụ `d913b844-a4af-44da-acb4-70ec90234155` → `acb4`) và lưu vào `orders.code`. Chạy migration `migrations/20261016_add_orders_code.sql` một lần để đảm bảo cột tồn tại, có dữ liệu cho các đơn cũ và có ràng buộc `NOT NULL`/`UNIQUE`.
 
 ### Menu
 
