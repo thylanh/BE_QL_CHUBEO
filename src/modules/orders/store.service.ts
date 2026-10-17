@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -54,7 +53,7 @@ export interface CreateOrderInput {
 
 type OrderRow = Omit<Order, 'lines'> & { line: OrderItem | null };
 
-const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8, 'ingredients', COALESCE((SELECT json_agg(json_build_object('ingredientId', mii.ingredient_id, 'amount', mii.amount::float8) ORDER BY mii.ingredient_id) FROM menu_item_ingredients mii WHERE mii.menu_item_id = oi.menu_item_id), '[]'::json)) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
+const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8, 'ingredients', COALESCE(oi.ingredients, '[]'::jsonb)) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
 
 @Injectable()
 export class OrdersStoreService {
@@ -68,12 +67,9 @@ export class OrdersStoreService {
   async createOrder(input: CreateOrderInput, createdBy: string) {
     const id = randomUUID();
     const serviceFee = input.serviceFee;
-    const orderLines = new Map<string, number>();
-    for (const line of input.lines)
-      orderLines.set(
-        line.menuItemId,
-        (orderLines.get(line.menuItemId) ?? 0) + line.quantity,
-      );
+    const menuItemIds = [
+      ...new Set(input.lines.map((line) => line.menuItemId)),
+    ];
     return this.database.transaction(async (client) => {
       const menuResult = await client.query<{
         id: string;
@@ -82,84 +78,64 @@ export class OrdersStoreService {
         active: boolean;
       }>(
         'SELECT id, name, price::float8 AS price, active FROM menu_items WHERE id = ANY($1) ORDER BY id FOR UPDATE',
-        [[...orderLines.keys()]],
+        [menuItemIds],
       );
       const menuItems = new Map(menuResult.rows.map((item) => [item.id, item]));
-      if (menuItems.size !== orderLines.size)
+      if (menuItems.size !== menuItemIds.length)
         throw new NotFoundException('Không tìm thấy món trong đơn hàng');
       for (const item of menuItems.values())
         if (!item.active)
           throw new ConflictException(`Món "${item.name}" hiện không khả dụng`);
-      const recipeResult = await client.query<{
-        menu_item_id: string;
-        ingredient_id: string;
-        amount: number;
+      const ingredientIds = [
+        ...new Set(
+          input.lines.flatMap((line) =>
+            line.ingredients.map((ingredient) => ingredient.ingredientId),
+          ),
+        ),
+      ];
+      const ingredientResult = await client.query<{
+        id: string;
         quantity: number;
       }>(
-        'SELECT mi.menu_item_id, i.id AS ingredient_id, mi.amount::float8 AS amount, i.quantity::float8 AS quantity FROM menu_item_ingredients mi JOIN inventory i ON i.id = mi.ingredient_id WHERE mi.menu_item_id = ANY($1) ORDER BY i.id FOR UPDATE OF i',
-        [[...orderLines.keys()]],
+        'SELECT id, quantity::float8 AS quantity FROM inventory WHERE id = ANY($1) ORDER BY id FOR UPDATE',
+        [ingredientIds],
       );
-      const ingredientDemand = new Map<string, number>();
-      const ingredientStock = new Map<string, number>();
-      const ingredientsByMenuItem = new Map<string, OrderIngredient[]>();
-      for (const recipe of recipeResult.rows) {
-        const ingredients =
-          ingredientsByMenuItem.get(recipe.menu_item_id) ?? [];
-        ingredients.push({
-          ingredientId: recipe.ingredient_id,
-          amount: Number(recipe.amount),
-        });
-        ingredientsByMenuItem.set(recipe.menu_item_id, ingredients);
+      const ingredientStock = new Map(
+        ingredientResult.rows.map((ingredient) => [
+          ingredient.id,
+          Number(ingredient.quantity),
+        ]),
+      );
+      if (ingredientStock.size !== ingredientIds.length)
+        throw new NotFoundException(
+          'Không tìm thấy nguyên liệu trong đơn hàng',
+        );
 
-        const amount =
-          Number(recipe.amount) * (orderLines.get(recipe.menu_item_id) ?? 0);
-        ingredientDemand.set(
-          recipe.ingredient_id,
-          (ingredientDemand.get(recipe.ingredient_id) ?? 0) + amount,
-        );
-        ingredientStock.set(recipe.ingredient_id, Number(recipe.quantity));
-      }
-      for (const line of input.lines) {
-        const actualIngredients =
-          ingredientsByMenuItem.get(line.menuItemId) ?? [];
-        const providedIngredients = [...line.ingredients].sort((a, b) =>
-          a.ingredientId.localeCompare(b.ingredientId),
-        );
-        const sortedActualIngredients = [...actualIngredients].sort((a, b) =>
-          a.ingredientId.localeCompare(b.ingredientId),
-        );
-        if (
-          providedIngredients.length !== sortedActualIngredients.length ||
-          providedIngredients.some(
-            (ingredient, index) =>
-              ingredient.ingredientId !==
-                sortedActualIngredients[index].ingredientId ||
-              ingredient.amount !== sortedActualIngredients[index].amount,
-          )
-        )
-          throw new BadRequestException(
-            `Danh sách nguyên liệu của món "${line.menuItemId}" không khớp công thức`,
+      const ingredientDemand = new Map<string, number>();
+      for (const line of input.lines)
+        for (const ingredient of line.ingredients)
+          ingredientDemand.set(
+            ingredient.ingredientId,
+            (ingredientDemand.get(ingredient.ingredientId) ?? 0) +
+              ingredient.amount * line.quantity,
           );
-      }
       for (const [ingredientId, amount] of ingredientDemand) {
         if ((ingredientStock.get(ingredientId) ?? 0) < amount)
           throw new ConflictException(
             `Không đủ tồn kho nguyên liệu "${ingredientId}"`,
           );
       }
-      const lines: OrderItem[] = [...orderLines].map(
-        ([menuItemId, quantity]) => {
-          const menuItem = menuItems.get(menuItemId)!;
-          return {
-            menuItemId,
-            name: menuItem.name,
-            price: Number(menuItem.price),
-            quantity,
-            total: Number(menuItem.price) * quantity,
-            ingredients: ingredientsByMenuItem.get(menuItemId) ?? [],
-          };
-        },
-      );
+      const lines: OrderItem[] = input.lines.map((line) => {
+        const menuItem = menuItems.get(line.menuItemId)!;
+        return {
+          menuItemId: line.menuItemId,
+          name: menuItem.name,
+          price: Number(menuItem.price),
+          quantity: line.quantity,
+          total: Number(menuItem.price) * line.quantity,
+          ingredients: line.ingredients,
+        };
+      });
       const subtotal = lines.reduce(
         (sum, line) => sum + line.price * line.quantity,
         0,
@@ -189,7 +165,7 @@ export class OrdersStoreService {
       );
       for (const line of lines)
         await client.query(
-          'INSERT INTO order_items (order_id, menu_item_id, name, quantity, price, total) VALUES ($1, $2, $3, $4, $5, $6)',
+          'INSERT INTO order_items (order_id, menu_item_id, name, quantity, price, total, ingredients) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)',
           [
             id,
             line.menuItemId,
@@ -197,6 +173,7 @@ export class OrdersStoreService {
             line.quantity,
             line.price,
             line.total,
+            JSON.stringify(line.ingredients),
           ],
         );
 
@@ -220,22 +197,16 @@ export class OrdersStoreService {
         const lines = await client.query<{
           menu_item_id: string;
           quantity: number;
+          ingredients: OrderIngredient[];
         }>(
-          'SELECT menu_item_id, quantity FROM order_items WHERE order_id = $1',
+          'SELECT menu_item_id, quantity, ingredients FROM order_items WHERE order_id = $1',
           [id],
         );
         for (const line of lines.rows) {
-          const ingredients = await client.query<{
-            ingredient_id: string;
-            amount: number;
-          }>(
-            'SELECT ingredient_id, amount FROM menu_item_ingredients WHERE menu_item_id = $1',
-            [line.menu_item_id],
-          );
-          for (const ingredient of ingredients.rows) {
+          for (const ingredient of line.ingredients) {
             await client.query(
               'UPDATE inventory SET quantity = quantity + $2, updated_at = NOW() WHERE id = $1',
-              [ingredient.ingredient_id, ingredient.amount * line.quantity],
+              [ingredient.ingredientId, ingredient.amount * line.quantity],
             );
           }
         }
