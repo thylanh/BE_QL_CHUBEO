@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Body,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { AuthGuard, Roles } from '../auth/auth.guard';
 import { User } from '../../shared/store.service';
 import {
   CreateOrderInput,
+  OrderPeriod,
   OrderStatus,
   OrdersStoreService,
 } from './store.service';
@@ -27,8 +29,8 @@ export class OrdersController {
   constructor(private readonly store: OrdersStoreService) {}
 
   @Get()
-  list() {
-    return this.store.listOrders();
+  list(@Query('period') period?: string) {
+    return this.store.listOrders(validateOrderPeriod(period));
   }
 
   @Post()
@@ -70,6 +72,13 @@ export class OrdersController {
       throw new ConflictException('Không thể thay đổi đơn đã kết thúc');
     return this.store.updateOrderStatus(id, status);
   }
+}
+
+function validateOrderPeriod(period?: string): OrderPeriod {
+  if (period === undefined) return 'month';
+  if (period === 'today' || period === 'week' || period === 'month')
+    return period;
+  throw new BadRequestException('period phải là today, week hoặc month');
 }
 
 function validateCreateOrderInput(

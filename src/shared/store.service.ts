@@ -25,7 +25,6 @@ export const verifyPasswordHash = (user: User, password: string) => {
 };
 
 export const sanitizeUser = (user: User) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { passwordHash, ...safeUser } = user;
+  const { ...safeUser } = user;
   return safeUser;
 };

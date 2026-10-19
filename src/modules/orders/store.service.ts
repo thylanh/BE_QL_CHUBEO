@@ -1,13 +1,17 @@
 import {
   ConflictException,
+  Logger,
   Injectable,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../../shared/database.service';
 
 export type OrderStatus =
   'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
+export type OrderPeriod = 'today' | 'week' | 'month';
 export interface OrderIngredient {
   ingredientId: string;
   amount: number;
@@ -56,13 +60,76 @@ type OrderRow = Omit<Order, 'lines'> & { line: OrderItem | null };
 const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8, 'ingredients', COALESCE(oi.ingredients, '[]'::jsonb)) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
 
 @Injectable()
-export class OrdersStoreService {
+export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(OrdersStoreService.name);
+  private cleanupInterval?: NodeJS.Timeout;
+  private cleanupInProgress?: Promise<void>;
+
   constructor(private readonly database: DatabaseService) {}
+
+  onModuleInit() {
+    void this.cleanupExpiredOrders().catch((error: unknown) => {
+      this.logCleanupError(error);
+    });
+    this.cleanupInterval = setInterval(
+      () => {
+        void this.cleanupExpiredOrders().catch((error: unknown) => {
+          this.logCleanupError(error);
+        });
+      },
+      24 * 60 * 60 * 1000,
+    );
+    this.cleanupInterval.unref();
+  }
+  onModuleDestroy() {
+    if (this.cleanupInterval) clearInterval(this.cleanupInterval);
+  }
+
   //danh sách đơn hàng
-  async listOrders() {
-    const result = await this.database.query<OrderRow>(orderQuery);
+  async listOrders(period: OrderPeriod = 'month') {
+    await this.cleanupExpiredOrders();
+    const periodFilter: Record<OrderPeriod, string> = {
+      today:
+        "o.created_at >= CURRENT_DATE AND o.created_at < CURRENT_DATE + INTERVAL '1 day'",
+      week: "o.created_at >= NOW() - INTERVAL '7 days'",
+      month: "o.created_at >= date_trunc('month', CURRENT_DATE)",
+    };
+    const result = await this.database.query<OrderRow>(
+      `${orderQuery} WHERE ${periodFilter[period]}`,
+    );
     return groupOrders(result.rows);
   }
+
+  private cleanupExpiredOrders(): Promise<void> {
+    if (this.cleanupInProgress) return this.cleanupInProgress;
+
+    this.cleanupInProgress = this.database
+      .transaction(async (client) => {
+        await client.query(
+          `DELETE FROM order_items
+           WHERE order_id IN (
+             SELECT id FROM orders
+             WHERE created_at < date_trunc('month', CURRENT_DATE)
+           )`,
+        );
+        await client.query(
+          "DELETE FROM orders WHERE created_at < date_trunc('month', CURRENT_DATE)",
+        );
+      })
+      .then(() => undefined)
+      .finally(() => {
+        this.cleanupInProgress = undefined;
+      });
+    return this.cleanupInProgress;
+  }
+
+  private logCleanupError(error: unknown) {
+    this.logger.error(
+      'Không thể xóa đơn hàng của tháng trước',
+      error instanceof Error ? error.stack : String(error),
+    );
+  }
+
   //tạo đơn hàng mới
   async createOrder(input: CreateOrderInput, createdBy: string) {
     const id = randomUUID();

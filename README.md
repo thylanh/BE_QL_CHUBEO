@@ -102,9 +102,11 @@ Các quyền nghiệp vụ:
 ### Orders
 
 - `GET /api/orders/menu`
-- `GET /api/orders`
+- `GET /api/orders?period=today|week|month` (mặc định `month`)
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
+
+`GET /api/orders` lọc đơn theo ngày tạo: `today` là hôm nay, `week` là 7 ngày gần nhất và `month` là tháng hiện tại. Hệ thống chỉ lưu đơn hàng trong tháng hiện tại; khi sang tháng mới, đơn và chi tiết đơn của các tháng trước được tự động xóa (kiểm tra lúc khởi động, mỗi giờ và trước khi lấy danh sách). Giá trị `period` khác các lựa chọn trên trả về `400`.
 
 `POST /api/orders` (ADMIN, MANAGER, STAFF) nhận body:
 
