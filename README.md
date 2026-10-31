@@ -163,12 +163,34 @@ Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `activ
 - `GET /api/reports/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
 - `GET /api/reports/best-selling?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER; tối đa 5 món, chỉ tính đơn `COMPLETED`)
 
+### Calendar
+
+- `GET /api/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `POST /api/calendar`
+- `PATCH /api/calendar/:id`
+- `DELETE /api/calendar/:id`
+
+Dữ liệu calendar lưu trong bảng `calendar_events` của PostgreSQL. Mỗi record gồm:
+
+```json
+{
+  "id": "1",
+  "title": "Hội nghị",
+  "start": "2026-11-01",
+  "end": "2026-11-05",
+  "extendedProps": {
+    "calendar": "Danger"
+  }
+}
+```
+
+`extendedProps.calendar` chỉ chấp nhận các giá trị `Danger`, `Success`, `Warning`. Cột `end` trong SQL cần được đặt trong dấu ngoặc kép vì đây là keyword của PostgreSQL.
+
 ### Uploads
 
 - `POST /api/uploads/image` (đã đăng nhập)
 
-Gửi request dạng `multipart/form-data` với field `file`. Chỉ nhận ảnh, tối đa 10 MB. Response trả về `secureUrl` và `publicId` của ảnh trên Cloudinary.
-
+Gửi request dạng `multipart/form-data` với field `file`. Chỉ nhận ảnh, tối đa 10 MB. Response trả về `secureUrl` và `publicId` của ảnh trên Cloudinary.
 Khi tạo đơn, hệ thống kiểm tra và trừ nguyên liệu theo định mức món. Khi hủy đơn, nguyên liệu được hoàn lại. Doanh thu chỉ tính các đơn có trạng thái `COMPLETED`.
 
 ## Kiểm tra

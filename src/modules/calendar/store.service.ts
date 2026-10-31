@@ -100,7 +100,6 @@ export class CalendarStoreService implements OnModuleInit {
         payload.extendedProps?.calendar ?? 'Success',
       ],
     );
-
     return mapRow(result.rows[0]);
   }
 
