@@ -1,8 +1,12 @@
+﻿import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
+import { DatabaseService } from '../../shared/database.service';
 
 export type CalendarColor = 'Danger' | 'Success' | 'Warning';
 
@@ -26,11 +30,37 @@ export interface CreateCalendarInput {
   };
 }
 
-@Injectable()
-export class CalendarStoreService {
-  private readonly events: CalendarEvent[] = this.buildBaseEvents();
+interface CalendarRow {
+  id: string;
+  title: string;
+  start: string;
+  end?: string | null;
+  calendar: CalendarColor;
+}
 
-  list(from?: string, to?: string): CalendarEvent[] {
+@Injectable()
+export class CalendarStoreService implements OnModuleInit {
+  private readonly logger = new Logger(CalendarStoreService.name);
+
+  constructor(private readonly database: DatabaseService) {}
+
+  async onModuleInit() {
+    await this.ensureTable();
+  }
+
+  private async ensureTable() {
+    await this.database.query(`
+      CREATE TABLE IF NOT EXISTS calendar_events (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        start TEXT NOT NULL,
+        "end" TEXT,
+        calendar TEXT NOT NULL CHECK (calendar IN ('Danger', 'Success', 'Warning'))
+      )
+    `);
+  }
+
+  async list(from?: string, to?: string): Promise<CalendarEvent[]> {
     const startDate = parseDate(from, startOfMonth(new Date()));
     const endDate = parseDate(to, endOfMonth(new Date()));
 
@@ -38,99 +68,103 @@ export class CalendarStoreService {
       throw new BadRequestException('from phải nhỏ hơn hoặc bằng to');
     }
 
-    return this.events.filter((event) => {
-      const eventStart = parseDate(event.start, startDate);
-      const eventEnd = event.end
-        ? parseDate(event.end, eventStart)
-        : eventStart;
-      return eventStart <= endDate && eventEnd >= startDate;
-    });
+    const result = await this.database.query<CalendarRow>(
+      `
+        SELECT id, title, start, "end", calendar
+        FROM calendar_events
+        WHERE start <= $2
+          AND COALESCE("end", start) >= $1
+        ORDER BY start ASC, id ASC
+      `,
+      [formatDate(startDate), formatDate(endDate)],
+    );
+
+    return result.rows.map(mapRow);
   }
 
-  create(input: Partial<CreateCalendarInput> = {}): CalendarEvent {
+  async create(
+    input: Partial<CreateCalendarInput> = {},
+  ): Promise<CalendarEvent> {
     const payload = validateEventInput(input);
-    const event: CalendarEvent = {
-      id:
-        payload.id ??
-        `calendar-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      title: payload.title.trim(),
-      start: payload.start,
-      ...(payload.end ? { end: payload.end } : {}),
-      extendedProps: {
-        calendar: payload.extendedProps?.calendar ?? 'Success',
-      },
-    };
+    const result = await this.database.query<CalendarRow>(
+      `
+        INSERT INTO calendar_events (id, title, start, "end", calendar)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, title, start, "end", calendar
+      `,
+      [
+        payload.id ?? randomUUID(),
+        payload.title,
+        payload.start,
+        payload.end ?? null,
+        payload.extendedProps?.calendar ?? 'Success',
+      ],
+    );
 
-    this.events.push(event);
-    return event;
+    return mapRow(result.rows[0]);
   }
 
-  update(id: string, input: Partial<CreateCalendarInput> = {}): CalendarEvent {
-    const index = this.events.findIndex((event) => event.id === id);
-    if (index === -1) {
+  async update(
+    id: string,
+    input: Partial<CreateCalendarInput> = {},
+  ): Promise<CalendarEvent> {
+    const existing = await this.database.query<CalendarRow>(
+      'SELECT id, title, start, "end", calendar FROM calendar_events WHERE id = $1',
+      [id],
+    );
+
+    if (existing.rowCount === 0) {
       throw new NotFoundException(`Không tìm thấy sự kiện có id = ${id}`);
     }
 
-    const current = this.events[index];
+    const current = existing.rows[0];
     const payload = validateEventInput({
-      ...current,
-      ...input,
+      id: current.id,
+      title: input.title ?? current.title,
+      start: input.start ?? current.start,
+      end: input.end ?? current.end ?? undefined,
       extendedProps: {
-        ...current.extendedProps,
-        ...(input.extendedProps ?? {}),
+        calendar: input.extendedProps?.calendar ?? current.calendar,
       },
     });
 
-    const event: CalendarEvent = {
-      id: current.id,
-      title: payload.title.trim(),
-      start: payload.start,
-      ...(payload.end ? { end: payload.end } : {}),
-      extendedProps: {
-        calendar:
-          payload.extendedProps?.calendar ?? current.extendedProps.calendar,
-      },
-    };
+    const result = await this.database.query<CalendarRow>(
+      `
+        UPDATE calendar_events
+        SET title = $2,
+            start = $3,
+            "end" = $4,
+            calendar = $5
+        WHERE id = $1
+        RETURNING id, title, start, "end", calendar
+      `,
+      [
+        id,
+        payload.title,
+        payload.start,
+        payload.end ?? null,
+        payload.extendedProps?.calendar ?? 'Success',
+      ],
+    );
 
-    this.events[index] = event;
-    return event;
+    return mapRow(result.rows[0]);
   }
 
-  delete(id: string): CalendarEvent {
-    const index = this.events.findIndex((event) => event.id === id);
-    if (index === -1) {
+  async delete(id: string): Promise<CalendarEvent> {
+    const result = await this.database.query<CalendarRow>(
+      `
+        DELETE FROM calendar_events
+        WHERE id = $1
+        RETURNING id, title, start, "end", calendar
+      `,
+      [id],
+    );
+
+    if (result.rowCount === 0) {
       throw new NotFoundException(`Không tìm thấy sự kiện có id = ${id}`);
     }
 
-    const [deleted] = this.events.splice(index, 1);
-    return deleted;
-  }
-
-  private buildBaseEvents(): CalendarEvent[] {
-    const seedDate = new Date();
-    const start = startOfMonth(seedDate);
-
-    return [
-      {
-        id: '1',
-        title: 'Hội nghị',
-        start: formatDate(start),
-        extendedProps: { calendar: 'Danger' },
-      },
-      {
-        id: '2',
-        title: 'Cuộc họp',
-        start: formatDate(addDays(start, 1)),
-        extendedProps: { calendar: 'Success' },
-      },
-      {
-        id: '3',
-        title: 'Hội thảo',
-        start: formatDate(addDays(start, 2)),
-        end: formatDate(addDays(start, 5)),
-        extendedProps: { calendar: 'Warning' },
-      },
-    ];
+    return mapRow(result.rows[0]);
   }
 }
 
@@ -138,13 +172,19 @@ function validateEventInput(
   input: Partial<CreateCalendarInput>,
 ): CreateCalendarInput {
   const title = typeof input.title === 'string' ? input.title.trim() : '';
-  if (!title) throw new BadRequestException('title không được để trống');
+  if (!title) {
+    throw new BadRequestException('title không được để trống');
+  }
 
   const start = normalizeEventDate(input.start, 'start');
   const end =
     input.end !== undefined ? normalizeEventDate(input.end, 'end') : undefined;
 
-  if (end && new Date(end).getTime() < new Date(start).getTime()) {
+  if (
+    end &&
+    new Date(`${end}T00:00:00`).getTime() <
+      new Date(`${start}T00:00:00`).getTime()
+  ) {
     throw new BadRequestException('end phải lớn hơn hoặc bằng start');
   }
 
@@ -172,7 +212,7 @@ function normalizeEventDate(value: unknown, field: 'start' | 'end'): string {
     throw new BadRequestException(`${field} không được để trống`);
   }
 
-  const parsed = new Date(value);
+  const parsed = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) {
     throw new BadRequestException(`${field} phải đúng định dạng ngày`);
   }
@@ -189,13 +229,6 @@ function parseDate(value: string | undefined, fallback: Date): Date {
   return parsed;
 }
 
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -204,8 +237,21 @@ function endOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(date.getDate() + days);
-  return next;
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function mapRow(row: CalendarRow): CalendarEvent {
+  return {
+    id: row.id,
+    title: row.title,
+    start: row.start,
+    ...(row.end ? { end: row.end } : {}),
+    extendedProps: {
+      calendar: row.calendar,
+    },
+  };
 }

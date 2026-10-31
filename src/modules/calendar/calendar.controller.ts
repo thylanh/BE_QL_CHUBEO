@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -10,8 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
-import { CalendarStoreService } from './store.service';
 import type { CalendarEvent, CreateCalendarInput } from './store.service';
+import { CalendarStoreService } from './store.service';
 
 @Controller('calendar')
 @UseGuards(AuthGuard)
@@ -19,28 +19,30 @@ export class CalendarController {
   constructor(private readonly store: CalendarStoreService) {}
 
   @Get()
-  list(
+  async list(
     @Query('from') from?: string,
     @Query('to') to?: string,
-  ): CalendarEvent[] {
+  ): Promise<CalendarEvent[]> {
     return this.store.list(from, to);
   }
 
   @Post()
-  create(@Body() body: Partial<CreateCalendarInput> = {}): CalendarEvent {
+  async create(
+    @Body() body: Partial<CreateCalendarInput> = {},
+  ): Promise<CalendarEvent> {
     return this.store.create(body);
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id') id: string,
     @Body() body: Partial<CreateCalendarInput> = {},
-  ): CalendarEvent {
+  ): Promise<CalendarEvent> {
     return this.store.update(id, body);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string): CalendarEvent {
+  async delete(@Param('id') id: string): Promise<CalendarEvent> {
     return this.store.delete(id);
   }
 }
