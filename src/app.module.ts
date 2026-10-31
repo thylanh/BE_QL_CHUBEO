@@ -5,6 +5,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { MenuModule } from './modules/menu/menu.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 import { DatabaseModule } from './shared/database.module';
 
 @Module({
@@ -16,6 +17,7 @@ import { DatabaseModule } from './shared/database.module';
     ReportsModule,
     UploadsModule,
     MenuModule,
+    CalendarModule,
   ],
 })
 export class AppModule {}

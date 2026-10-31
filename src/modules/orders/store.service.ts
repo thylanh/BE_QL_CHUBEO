@@ -99,10 +99,8 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
     );
     return groupOrders(result.rows);
   }
-
   private cleanupExpiredOrders(): Promise<void> {
     if (this.cleanupInProgress) return this.cleanupInProgress;
-
     this.cleanupInProgress = this.database
       .transaction(async (client) => {
         await client.query(
@@ -122,7 +120,6 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
       });
     return this.cleanupInProgress;
   }
-
   private logCleanupError(error: unknown) {
     this.logger.error(
       'Không thể xóa đơn hàng của tháng trước',
@@ -303,6 +300,30 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
       revenue: orders.reduce((sum, order) => sum + order.total, 0),
       orders,
     };
+  }
+
+  async bestSelling(from?: string, to?: string) {
+    const result = await this.database.query<{
+      menuItemId: string;
+      name: string;
+      quantitySold: number;
+      revenue: number;
+    }>(
+      `SELECT oi.menu_item_id AS "menuItemId", MAX(oi.name) AS name,
+              SUM(oi.quantity)::int AS "quantitySold",
+              SUM(oi.total)::float8 AS revenue
+       FROM orders o
+       JOIN order_items oi ON oi.order_id = o.id
+       WHERE o.status = 'COMPLETED'
+         AND oi.menu_item_id IS NOT NULL
+         AND ($1::date IS NULL OR o.created_at >= $1::date)
+         AND ($2::date IS NULL OR o.created_at < ($2::date + INTERVAL '1 day'))
+       GROUP BY oi.menu_item_id
+       ORDER BY SUM(oi.quantity) DESC, SUM(oi.total) DESC, MAX(oi.name) ASC
+       LIMIT 5`,
+      [from ?? null, to ?? null],
+    );
+    return result.rows;
   }
 }
 

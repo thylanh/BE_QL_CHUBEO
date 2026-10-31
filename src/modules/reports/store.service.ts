@@ -8,4 +8,8 @@ export class ReportsStoreService {
   revenue(from?: string, to?: string) {
     return this.ordersStore.revenue(from, to);
   }
+
+  bestSelling(from?: string, to?: string) {
+    return this.ordersStore.bestSelling(from, to);
+  }
 }

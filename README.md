@@ -102,7 +102,7 @@ Các quyền nghiệp vụ:
 ### Orders
 
 - `GET /api/orders/menu`
-- `GET /api/orders?period=today|week|month` (mặc định `month`)
+- `GET /api/orders?period=today|week|month` (mặc định `today`)
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
 
@@ -161,6 +161,7 @@ Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `activ
 ### Reports
 
 - `GET /api/reports/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
+- `GET /api/reports/best-selling?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER; tối đa 5 món, chỉ tính đơn `COMPLETED`)
 
 ### Uploads
 

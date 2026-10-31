@@ -12,4 +12,9 @@ export class ReportsController {
   revenue(@Query('from') from?: string, @Query('to') to?: string) {
     return this.store.revenue(from, to);
   }
+
+  @Get('best-selling')
+  bestSelling(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.store.bestSelling(from, to);
+  }
 }
