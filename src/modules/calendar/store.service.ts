@@ -63,7 +63,6 @@ export class CalendarStoreService implements OnModuleInit {
   async list(from?: string, to?: string): Promise<CalendarEvent[]> {
     const startDate = parseDate(from, startOfMonth(new Date()));
     const endDate = parseDate(to, endOfMonth(new Date()));
-
     if (startDate > endDate) {
       throw new BadRequestException('from phải nhỏ hơn hoặc bằng to');
     }
