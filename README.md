@@ -179,12 +179,12 @@ Dữ liệu calendar lưu trong bảng `calendar_events` của PostgreSQL. Mỗi
   "start": "2026-11-01",
   "end": "2026-11-05",
   "extendedProps": {
-    "calendar": "Danger"
+    "calendar": "danger"
   }
 }
 ```
 
-`extendedProps.calendar` chỉ chấp nhận các giá trị `Danger`, `Success`, `Warning`. Cột `end` trong SQL cần được đặt trong dấu ngoặc kép vì đây là keyword của PostgreSQL.
+`extendedProps.calendar` chỉ chấp nhận các giá trị `danger`, `success`, `warning`, `primary`. Cột `end` trong SQL cần được đặt trong dấu ngoặc kép vì đây là keyword của PostgreSQL.
 
 ### Uploads
 

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../shared/database.service';
 
-export type CalendarColor = 'Danger' | 'Success' | 'Warning';
+export type CalendarColor = 'danger' | 'success' | 'warning' | 'primary';
 
 export interface CalendarEvent {
   id: string;
@@ -55,7 +55,7 @@ export class CalendarStoreService implements OnModuleInit {
         title TEXT NOT NULL,
         start TEXT NOT NULL,
         "end" TEXT,
-        calendar TEXT NOT NULL CHECK (calendar IN ('Danger', 'Success', 'Warning'))
+        calendar TEXT NOT NULL CHECK (calendar IN ('danger', 'success', 'warning', 'primary'))
       )
     `);
   }
@@ -96,7 +96,7 @@ export class CalendarStoreService implements OnModuleInit {
         payload.title,
         payload.start,
         payload.end ?? null,
-        payload.extendedProps?.calendar ?? 'Success',
+        payload.extendedProps?.calendar ?? 'success',
       ],
     );
     return mapRow(result.rows[0]);
@@ -125,7 +125,6 @@ export class CalendarStoreService implements OnModuleInit {
         calendar: input.extendedProps?.calendar ?? current.calendar,
       },
     });
-
     const result = await this.database.query<CalendarRow>(
       `
         UPDATE calendar_events
@@ -141,10 +140,9 @@ export class CalendarStoreService implements OnModuleInit {
         payload.title,
         payload.start,
         payload.end ?? null,
-        payload.extendedProps?.calendar ?? 'Success',
+        payload.extendedProps?.calendar ?? 'success',
       ],
     );
-
     return mapRow(result.rows[0]);
   }
 
@@ -186,12 +184,18 @@ function validateEventInput(
     throw new BadRequestException('end phải lớn hơn hoặc bằng start');
   }
 
-  const calendar = input.extendedProps?.calendar ?? 'Success';
-  if (!['Danger', 'Success', 'Warning'].includes(calendar)) {
+  const calendarValue =
+    typeof input.extendedProps?.calendar === 'string'
+      ? input.extendedProps.calendar.trim().toLowerCase()
+      : 'success';
+
+  if (!['danger', 'success', 'warning', 'primary'].includes(calendarValue)) {
     throw new BadRequestException(
-      'extendedProps.calendar phải là Danger, Success hoặc Warning',
+      'extendedProps.calendar phải là danger, success, warning hoặc primary',
     );
   }
+
+  const calendar = calendarValue as CalendarColor;
 
   return {
     id:
