@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  OnModuleInit,
 } from '@nestjs/common';
 import { DatabaseService } from '../../shared/database.service';
 
@@ -39,26 +38,10 @@ interface CalendarRow {
 }
 
 @Injectable()
-export class CalendarStoreService implements OnModuleInit {
+export class CalendarStoreService {
   private readonly logger = new Logger(CalendarStoreService.name);
 
   constructor(private readonly database: DatabaseService) {}
-
-  async onModuleInit() {
-    await this.ensureTable();
-  }
-
-  private async ensureTable() {
-    await this.database.query(`
-      CREATE TABLE IF NOT EXISTS calendar_events (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        start TEXT NOT NULL,
-        "end" TEXT,
-        calendar TEXT NOT NULL CHECK (calendar IN ('danger', 'success', 'warning', 'primary'))
-      )
-    `);
-  }
 
   async list(from?: string, to?: string): Promise<CalendarEvent[]> {
     const startDate = parseDate(from, startOfMonth(new Date()));
