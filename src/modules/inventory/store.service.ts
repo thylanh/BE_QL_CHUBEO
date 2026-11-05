@@ -5,6 +5,8 @@ import { DatabaseService } from '../../shared/database.service';
 export interface InventoryInput {
   name: string;
   unit: string;
+  purchaseUnit?: string;
+  conversionRate?: number;
   quantity?: number;
   minQuantity?: number;
   costPrice?: number;
@@ -14,6 +16,8 @@ export interface InventoryItem {
   id: string;
   name: string;
   unit: string;
+  purchaseUnit: string;
+  conversionRate: number;
   quantity: number;
   minQuantity: number;
   costPrice: number;
@@ -27,21 +31,21 @@ export class InventoryStoreService {
 
   async listInventory() {
     const result = await this.database.query<InventoryItem>(
-      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory ORDER BY name',
+      'SELECT id, name, unit, purchase_unit AS "purchaseUnit", conversion_rate AS "conversionRate", quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory ORDER BY name',
     );
     return result.rows.map(normalizeInventory);
   }
 
   async lowStockInventory() {
     const result = await this.database.query<InventoryItem>(
-      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE quantity <= min_quantity OR quantity <= 0 ORDER BY name',
+      'SELECT id, name, unit, purchase_unit AS "purchaseUnit", conversion_rate AS "conversionRate", quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE quantity <= min_quantity OR quantity <= 0 ORDER BY name',
     );
     return result.rows.map(normalizeInventory);
   }
 
   async getInventoryItem(id: string) {
     const result = await this.database.query<InventoryItem>(
-      'SELECT id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE id = $1',
+      'SELECT id, name, unit, purchase_unit AS "purchaseUnit", conversion_rate AS "conversionRate", quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt" FROM inventory WHERE id = $1',
       [id],
     );
     return result.rows[0] && normalizeInventory(result.rows[0]);
@@ -49,12 +53,16 @@ export class InventoryStoreService {
 
   async createInventoryItem(input: InventoryInput) {
     const id = randomUUID();
+    const purchaseUnit = input.purchaseUnit?.trim() || input.unit.trim();
+    const conversionRate = Number(input.conversionRate ?? 1);
     const result = await this.database.query<InventoryItem>(
-      'INSERT INTO inventory (id, name, unit, quantity, min_quantity, cost_price, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
+      'INSERT INTO inventory (id, name, unit, purchase_unit, conversion_rate, quantity, min_quantity, cost_price, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id, name, unit, purchase_unit AS "purchaseUnit", conversion_rate AS "conversionRate", quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
       [
         id,
         input.name,
         input.unit,
+        purchaseUnit,
+        conversionRate,
         Number(input.quantity ?? 0),
         Number(input.minQuantity ?? 0),
         Number(input.costPrice ?? 0),
@@ -65,7 +73,7 @@ export class InventoryStoreService {
 
   async deleteInventoryItem(id: string) {
     const result = await this.database.query<InventoryItem>(
-      'DELETE FROM inventory WHERE id = $1 RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
+      'DELETE FROM inventory WHERE id = $1 RETURNING id, name, unit, purchase_unit AS "purchaseUnit", conversion_rate AS "conversionRate", quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
       [id],
     );
     return result.rows[0] && normalizeInventory(result.rows[0]);
@@ -73,7 +81,7 @@ export class InventoryStoreService {
 
   async adjustInventory(id: string, delta: number) {
     const result = await this.database.query<InventoryItem>(
-      'UPDATE inventory SET quantity = quantity + $2, updated_at = NOW() WHERE id = $1 AND quantity + $2 >= 0 RETURNING id, name, unit, quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
+      'UPDATE inventory SET quantity = quantity + $2, updated_at = NOW() WHERE id = $1 AND quantity + $2 >= 0 RETURNING id, name, unit, purchase_unit AS "purchaseUnit", conversion_rate AS "conversionRate", quantity, min_quantity AS "minQuantity", cost_price AS "costPrice", updated_at AS "updatedAt"',
       [id, delta],
     );
     return result.rows[0] && normalizeInventory(result.rows[0]);
@@ -83,8 +91,11 @@ export class InventoryStoreService {
 function normalizeInventory(item: InventoryItem) {
   const quantity = Number(item.quantity);
   const minQuantity = Number(item.minQuantity);
+  const conversionRate = Number(item.conversionRate ?? 1);
   return {
     ...item,
+    purchaseUnit: item.purchaseUnit ?? item.unit,
+    conversionRate,
     quantity,
     minQuantity,
     costPrice: Number(item.costPrice),

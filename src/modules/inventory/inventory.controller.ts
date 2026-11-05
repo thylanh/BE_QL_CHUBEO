@@ -72,7 +72,16 @@ export class InventoryController {
     const item = await this.store.getInventoryItem(id);
     if (!item) throw new BadRequestException('Không tìm thấy nguyên liệu');
 
-    const updated = await this.store.adjustInventory(id, quantity * direction);
+    const conversionRate = Number(item.conversionRate ?? 1);
+    const adjustedQuantity =
+      item.purchaseUnit && item.purchaseUnit !== item.unit
+        ? quantity * conversionRate
+        : quantity;
+
+    const updated = await this.store.adjustInventory(
+      id,
+      adjustedQuantity * direction,
+    );
     if (!updated) throw new BadRequestException('Số lượng tồn không thể âm');
 
     return {
@@ -118,10 +127,33 @@ function validateInventoryInput(
   if (costPrice !== undefined && (!Number.isFinite(costPrice) || costPrice < 0))
     throw new BadRequestException('Giá vốn phải là số không âm');
 
+  const purchaseUnit = body.purchaseUnit?.trim();
+  if (purchaseUnit !== undefined && !purchaseUnit)
+    throw new BadRequestException('Đơn vị mua vào không được để trống');
+
+  const conversionRate =
+    body.conversionRate === undefined ? undefined : Number(body.conversionRate);
+  if (
+    conversionRate !== undefined &&
+    (!Number.isFinite(conversionRate) || conversionRate <= 0)
+  )
+    throw new BadRequestException('Tỷ lệ quy đổi phải là số lớn hơn 0');
+
+  if (
+    (purchaseUnit === undefined && conversionRate !== undefined) ||
+    (purchaseUnit !== undefined && conversionRate === undefined)
+  ) {
+    throw new BadRequestException(
+      'purchaseUnit và conversionRate phải được nhập cùng nhau',
+    );
+  }
+
   return {
     ...body,
     ...(name === undefined ? {} : { name }),
     ...(unit === undefined ? {} : { unit }),
+    ...(purchaseUnit === undefined ? {} : { purchaseUnit }),
+    ...(conversionRate === undefined ? {} : { conversionRate }),
     ...(quantity === undefined ? {} : { quantity }),
     ...(minQuantity === undefined ? {} : { minQuantity }),
     ...(costPrice === undefined ? {} : { costPrice }),
