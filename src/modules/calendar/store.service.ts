@@ -125,6 +125,7 @@ export class CalendarStoreService implements OnModuleInit {
         calendar: input.extendedProps?.calendar ?? current.calendar,
       },
     });
+
     const result = await this.database.query<CalendarRow>(
       `
         UPDATE calendar_events
@@ -143,6 +144,7 @@ export class CalendarStoreService implements OnModuleInit {
         payload.extendedProps?.calendar ?? 'success',
       ],
     );
+
     return mapRow(result.rows[0]);
   }
 
