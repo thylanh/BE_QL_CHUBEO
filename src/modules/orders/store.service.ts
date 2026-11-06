@@ -181,7 +181,7 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
           ingredientDemand.set(
             ingredient.ingredientId,
             (ingredientDemand.get(ingredient.ingredientId) ?? 0) +
-              ingredient.amount * line.quantity,
+              ingredient.amount,
           );
       for (const [ingredientId, amount] of ingredientDemand) {
         if ((ingredientStock.get(ingredientId) ?? 0) < amount)
@@ -270,7 +270,7 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
           for (const ingredient of line.ingredients) {
             await client.query(
               'UPDATE inventory SET quantity = quantity + $2, updated_at = NOW() WHERE id = $1',
-              [ingredient.ingredientId, ingredient.amount * line.quantity],
+              [ingredient.ingredientId, ingredient.amount],
             );
           }
         }
