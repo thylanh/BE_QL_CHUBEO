@@ -150,9 +150,47 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
       for (const item of menuItems.values())
         if (!item.active)
           throw new ConflictException(`Món "${item.name}" hiện không khả dụng`);
+      const menuItemIngredients = new Map<string, Map<string, number>>();
+      const menuIngredientResult = await client.query<{
+        menu_item_id: string;
+        ingredient_id: string;
+        amount: number;
+      }>(
+        'SELECT menu_item_id, ingredient_id, amount::float8 AS amount FROM menu_item_ingredients WHERE menu_item_id = ANY($1)',
+        [menuItemIds],
+      );
+      for (const ingredient of menuIngredientResult.rows) {
+        const ingredientAmounts =
+          menuItemIngredients.get(ingredient.menu_item_id) ??
+          new Map<string, number>();
+        ingredientAmounts.set(
+          ingredient.ingredient_id,
+          Number(ingredient.amount),
+        );
+        menuItemIngredients.set(ingredient.menu_item_id, ingredientAmounts);
+      }
+
+      const normalizedLines = input.lines.map((line) => {
+        const recipeIngredients = menuItemIngredients.get(line.menuItemId);
+        const ingredients =
+          recipeIngredients && recipeIngredients.size > 0
+            ? [...recipeIngredients.entries()].map(
+                ([ingredientId, amount]) => ({
+                  ingredientId,
+                  amount,
+                }),
+              )
+            : line.ingredients;
+
+        return {
+          ...line,
+          ingredients,
+        };
+      });
+
       const ingredientIds = [
         ...new Set(
-          input.lines.flatMap((line) =>
+          normalizedLines.flatMap((line) =>
             line.ingredients.map((ingredient) => ingredient.ingredientId),
           ),
         ),
@@ -176,7 +214,7 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
         );
 
       const ingredientDemand = new Map<string, number>();
-      for (const line of input.lines)
+      for (const line of normalizedLines)
         for (const ingredient of line.ingredients)
           ingredientDemand.set(
             ingredient.ingredientId,
@@ -189,7 +227,7 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
             `Không đủ tồn kho nguyên liệu "${ingredientId}"`,
           );
       }
-      const lines: OrderItem[] = input.lines.map((line) => {
+      const lines: OrderItem[] = normalizedLines.map((line) => {
         const menuItem = menuItems.get(line.menuItemId)!;
         return {
           menuItemId: line.menuItemId,
