@@ -111,17 +111,20 @@ function validateCreateOrderInput(
         typeof ingredient?.ingredientId === 'string'
           ? ingredient.ingredientId.trim()
           : '';
+      const name =
+        typeof ingredient?.name === 'string' ? ingredient.name.trim() : '';
       const amount = ingredient?.amount;
       if (
         !ingredientId ||
+        !name ||
         typeof amount !== 'number' ||
         !Number.isFinite(amount) ||
         amount <= 0
       )
         throw new BadRequestException(
-          'Mỗi nguyên liệu phải có ingredientId và amount là số dương',
+          'Mỗi nguyên liệu phải có ingredientId, name và amount là số dương',
         );
-      return { ingredientId, amount };
+      return { ingredientId, name, amount };
     });
     return { menuItemId, quantity, ingredients };
   });

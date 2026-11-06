@@ -14,6 +14,7 @@ export type OrderStatus =
 export type OrderPeriod = 'today' | 'week' | 'month';
 export interface OrderIngredient {
   ingredientId: string;
+  name: string;
   amount: number;
 }
 export interface OrderItem {
@@ -159,21 +160,31 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
       ];
       const ingredientResult = await client.query<{
         id: string;
+        name: string;
         quantity: number;
       }>(
-        'SELECT id, quantity::float8 AS quantity FROM inventory WHERE id = ANY($1) ORDER BY id FOR UPDATE',
+        'SELECT id, name, quantity::float8 AS quantity FROM inventory WHERE id = ANY($1) ORDER BY id FOR UPDATE',
         [ingredientIds],
       );
+      const ingredientInfo = new Map(
+        ingredientResult.rows.map((ingredient) => [
+          ingredient.id,
+          {
+            name: ingredient.name,
+            quantity: Number(ingredient.quantity),
+          },
+        ]),
+      );
+      if (ingredientInfo.size !== ingredientIds.length)
+        throw new NotFoundException(
+          'Không tìm thấy nguyên liệu trong đơn hàng',
+        );
       const ingredientStock = new Map(
         ingredientResult.rows.map((ingredient) => [
           ingredient.id,
           Number(ingredient.quantity),
         ]),
       );
-      if (ingredientStock.size !== ingredientIds.length)
-        throw new NotFoundException(
-          'Không tìm thấy nguyên liệu trong đơn hàng',
-        );
 
       const ingredientDemand = new Map<string, number>();
       for (const line of input.lines)
@@ -197,7 +208,14 @@ export class OrdersStoreService implements OnModuleInit, OnModuleDestroy {
           price: Number(menuItem.price),
           quantity: line.quantity,
           total: Number(menuItem.price) * line.quantity,
-          ingredients: line.ingredients,
+          ingredients: line.ingredients.map((ingredient) => ({
+            ingredientId: ingredient.ingredientId,
+            name:
+              ingredient.name.trim() ||
+              ingredientInfo.get(ingredient.ingredientId)?.name ||
+              ingredient.ingredientId,
+            amount: ingredient.amount,
+          })),
         };
       });
       const subtotal = lines.reduce(
