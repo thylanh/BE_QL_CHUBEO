@@ -158,6 +158,94 @@ Menu item hỗ trợ `name`, `price`, `category`, `description`, `image`, `activ
 - `POST /api/inventory/:id/stock-in` (ADMIN, MANAGER; body: `{"quantity": 10}`)
 - `POST /api/inventory/:id/stock-out` (ADMIN, MANAGER; body: `{"quantity": 2}`)
 
+### Employees
+
+- `GET /api/employees` (ADMIN, MANAGER)
+- `GET /api/employees/:id` (ADMIN, MANAGER, STAFF)
+- `POST /api/employees` (ADMIN, MANAGER)
+- `PATCH /api/employees/:id` (ADMIN, MANAGER)
+- `DELETE /api/employees/:id` (ADMIN)
+- `GET /api/employees/attendance?employeeId=&from=&to=` (ADMIN, MANAGER)
+- `POST /api/employees/attendance` (ADMIN, MANAGER)
+- `GET /api/employees/payrolls?employeeId=&from=&to=` (ADMIN, MANAGER)
+- `POST /api/employees/payrolls/generate` (ADMIN, MANAGER)
+
+Module nhân viên dùng để quản lý hồ sơ, chấm công và tính lương. Mỗi nhân viên có các trường chính:
+
+```json
+{
+  "userId": "uuid",
+  "code": "NV-ABCD1234",
+  "fullName": "Nguyễn Văn A",
+  "email": "nv.a@company.com",
+  "phone": "0909123456",
+  "department": "Bếp",
+  "position": "Pha chế",
+  "hireDate": "2026-11-01",
+  "status": "ACTIVE",
+  "baseSalary": 15000000,
+  "note": "Nhân viên full-time"
+}
+```
+
+Các trạng thái nhân viên:
+
+- `ACTIVE`: đang làm việc
+- `INACTIVE`: tạm ngưng
+- `RESIGNED`: đã nghỉ việc
+
+API tạo/sửa nhân viên chấp nhận các trường trên. Nếu `code` không gửi, hệ thống tự tạo mã theo định dạng `NV-<8 ký tự UUID>`; nếu `userId` gửi thì phải là tài khoản người dùng đã tồn tại.
+
+### Chấm công
+
+`POST /api/employees/attendance` dùng để ghi nhận buổi làm trong ngày:
+
+```json
+{
+  "employeeId": "550e8400-e29b-41d4-a716-446655440000",
+  "workDate": "2026-11-07",
+  "checkIn": "2026-11-07T08:00:00.000Z",
+  "checkOut": "2026-11-07T17:00:00.000Z",
+  "status": "PRESENT",
+  "note": "Làm việc bình thường"
+}
+```
+
+Trạng thái chấm công hợp lệ:
+
+- `PRESENT`, `LATE`, `ABSENT`, `LEAVE`, `OFF`, `HOLIDAY`
+
+Hệ thống tự tính số giờ làm (`hoursWorked`) dựa trên thời gian check-in/check-out; nếu thiếu một trong hai thời điểm thì `hoursWorked` sẽ là 0.
+
+### Tính lương
+
+`POST /api/employees/payrolls/generate` tạo bảng lương theo kỳ cho một nhân viên:
+
+```json
+{
+  "employeeId": "550e8400-e29b-41d4-a716-446655440000",
+  "periodStart": "2026-11-01",
+  "periodEnd": "2026-11-30",
+  "allowance": 500000,
+  "deduction": 200000,
+  "overtimeHours": 4,
+  "paid": false
+}
+```
+
+Hệ thống tính:
+
+- `baseSalary`: lương cơ bản
+- `workingDays`: số ngày làm việc trong kỳ
+- `attendanceDays`: số ngày có chấm công
+- `overtimeHours`: tổng giờ tăng ca
+- `totalSalary = baseSalary + allowance + overtimePay - deduction`
+
+Trạng thái payroll:
+
+- `DRAFT`: bản nháp
+- `PAID`: đã thanh toán
+
 ### Reports
 
 - `GET /api/reports/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
