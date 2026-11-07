@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard, Roles } from '../auth/auth.guard';
-import { EmployeesService } from './store.service';
+import { EmployeesService } from './employees.service';
 
 @Controller('employees')
 @UseGuards(AuthGuard)

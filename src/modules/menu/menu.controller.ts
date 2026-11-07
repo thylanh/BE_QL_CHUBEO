@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard, Roles } from '../auth/auth.guard';
-import { MenuInput, MenuStoreService } from './store.service';
+import { MenuInput, MenuStoreService } from './menu.service';
 
 @Controller('menu')
 @UseGuards(AuthGuard)

@@ -19,7 +19,7 @@ import {
   OrderPeriod,
   OrderStatus,
   OrdersStoreService,
-} from './store.service';
+} from './orders.service';
 
 type AuthenticatedRequest = Request & { user: User };
 

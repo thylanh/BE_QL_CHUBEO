@@ -10,8 +10,8 @@
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
-import type { CalendarEvent, CreateCalendarInput } from './store.service';
-import { CalendarStoreService } from './store.service';
+import type { CalendarEvent, CreateCalendarInput } from './calendar.service';
+import { CalendarStoreService } from './calendar.service';
 
 @Controller('calendar')
 @UseGuards(AuthGuard)

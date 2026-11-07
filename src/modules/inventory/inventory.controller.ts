@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard, Roles } from '../auth/auth.guard';
-import { InventoryInput, InventoryStoreService } from './store.service';
+import { InventoryInput, InventoryStoreService } from './inventory.service';
 
 @Controller('inventory')
 @UseGuards(AuthGuard)
