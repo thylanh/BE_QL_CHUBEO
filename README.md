@@ -8,6 +8,9 @@ src/
 		user/       # Quản lý tài khoản người dùng và phân quyền
 		orders/     # Thực đơn và đơn hàng
 		inventory/  # Tồn kho
+		employees/  # Quản lý nhân sự, chấm công và lương
+		attendance/ # Chấm công nhân viên
+		payroll/    # Tính lương và bảng lương nhân viên
 		reports/    # Báo cáo doanh thu
 	shared/
 		database.service.ts  # Kết nối, transaction và khởi tạo schema
@@ -81,63 +84,45 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `POST /api/inventory/:id/stock-out` (ADMIN, MANAGER; body: `{"quantity": 2}`)
 
 ### Employees
-
 - `GET /api/employees` (ADMIN, MANAGER)
 - `GET /api/employees/:id` (ADMIN, MANAGER, STAFF)
 - `POST /api/employees` (ADMIN, MANAGER)
 - `PATCH /api/employees/:id` (ADMIN, MANAGER)
 - `DELETE /api/employees/:id` (ADMIN)
-- `GET /api/employees/attendance?employeeId=&from=&to=` (ADMIN, MANAGER)
-- `POST /api/employees/attendance` (ADMIN, MANAGER)
-- `GET /api/employees/payrolls?employeeId=&from=&to=` (ADMIN, MANAGER)
-- `POST /api/employees/payrolls/generate` (ADMIN, MANAGER)
 
-### Chấm công
-
-`POST /api/employees/attendance` dùng để ghi nhận buổi làm trong ngày:
-
-```json
-{
-  "employeeId": "550e8400-e29b-41d4-a716-446655440000",
-  "workDate": "2026-11-07",
-  "checkIn": "2026-11-07T08:00:00.000Z",
-  "checkOut": "2026-11-07T17:00:00.000Z",
-  "status": "PRESENT",
-  "note": "Làm việc bình thường"
-}
+### Attendance
+- `GET /api/attendance?employeeId=` (ADMIN, MANAGER, STAFF)
+- `POST /api/attendance/check-in` (ADMIN, MANAGER, STAFF)
+- `POST /api/attendance/check-out` (ADMIN, MANAGER, STAFF)
+```sql
+attendance (
+  id TEXT,
+  employee_id TEXT,
+  check_in TIMESTAMPTZ,
+  check_out TIMESTAMPTZ,
+  total_minutes INTEGER,
+  status TEXT,
+  note TEXT
+)
 ```
 
-Trạng thái chấm công hợp lệ:
-
-- `PRESENT`, `LATE`, `ABSENT`, `LEAVE`, `OFF`, `HOLIDAY`
-  Hệ thống tự tính số giờ làm (`hoursWorked`) dựa trên thời gian check-in/check-out; nếu thiếu một trong hai thời điểm thì `hoursWorked` sẽ là 0.
-
-### Tính lương
-
-`POST /api/employees/payrolls/generate` tạo bảng lương theo kỳ cho một nhân viên:
-
-```json
-{
-  "employeeId": "550e8400-e29b-41d4-a716-446655440000",
-  "periodStart": "2026-11-01",
-  "periodEnd": "2026-11-30",
-  "allowance": 500000,
-  "deduction": 200000,
-  "overtimeHours": 4,
-  "paid": false
-}
+### Payroll
+- `GET /api/payroll?employeeId=&month=` (ADMIN, MANAGER)
+- `POST /api/payroll/calculate` (ADMIN, MANAGER)
+```sql
+payroll (
+  id TEXT,
+  employee_id TEXT,
+  month INTEGER,
+  total_minutes INTEGER,
+  hourly_rate NUMERIC,
+  base_salary NUMERIC,
+  bonus NUMERIC,
+  deduction NUMERIC,
+  net_salary NUMERIC,
+  status TEXT
+)
 ```
-
-Hệ thống tính:
-
-- `baseSalary`: lương cơ bản
-- `workingDays`: số ngày làm việc trong kỳ
-- `attendanceDays`: số ngày có chấm công
-- `overtimeHours`: tổng giờ tăng ca
-- `totalSalary = baseSalary + allowance + overtimePay - deduction`
-  Trạng thái payroll:
-- `DRAFT`: bản nháp
-- `PAID`: đã thanh toán
 
 ### Reports
 

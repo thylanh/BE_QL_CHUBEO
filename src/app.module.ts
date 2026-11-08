@@ -8,6 +8,8 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { MenuModule } from './modules/menu/menu.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { EmployeesModule } from './modules/employees/employees.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { PayrollModule } from './modules/payroll/payroll.module';
 import { DatabaseModule } from './shared/database.module';
 
 @Module({
@@ -22,6 +24,8 @@ import { DatabaseModule } from './shared/database.module';
     MenuModule,
     CalendarModule,
     EmployeesModule,
+    AttendanceModule,
+    PayrollModule,
   ],
 })
 export class AppModule {}
