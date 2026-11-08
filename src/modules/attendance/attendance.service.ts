@@ -251,7 +251,6 @@ export class AttendanceService {
       'SELECT * FROM attendance WHERE id = $1',
       [record.id],
     );
-
     return this.mapAttendance(result.rows[0]);
   }
 
@@ -302,17 +301,59 @@ export class AttendanceService {
     return Math.round(diffMs / 60000);
   }
 
-  private mapAttendance(row: Record<string, any>): AttendanceRecord {
+  private toStringValue(value: unknown, fallback = ''): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      value instanceof Date
+    ) {
+      return String(value);
+    }
+
+    return fallback;
+  }
+
+  private toIsoDate(value: unknown): string | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const dateValue =
+      value instanceof Date
+        ? value
+        : typeof value === 'string' || typeof value === 'number'
+          ? new Date(value)
+          : null;
+
+    if (!dateValue || Number.isNaN(dateValue.getTime())) {
+      return null;
+    }
+
+    return dateValue.toISOString();
+  }
+
+  private mapAttendance(row: Record<string, unknown>): AttendanceRecord {
+    const note = typeof row.note === 'string' ? row.note : null;
+
     return {
-      id: row.id,
-      employeeId: row.employeeId,
-      checkIn: row.checkIn ? new Date(row.checkIn).toISOString() : null,
-      checkOut: row.checkOut ? new Date(row.checkOut).toISOString() : null,
-      totalMinutes: Number(row.totalMinutes ?? row.hours_worked ?? 0),
-      status: (row.status ?? 'PRESENT') as AttendanceStatus,
-      note: row.note ?? null,
-      createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null,
-      updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+      id: this.toStringValue(row.id),
+      employeeId: this.toStringValue(row.employeeId),
+      checkIn: this.toIsoDate(row.checkIn),
+      checkOut: this.toIsoDate(row.checkOut),
+      totalMinutes: Number(
+        this.toStringValue(row.totalMinutes ?? row.hours_worked ?? 0, '0'),
+      ),
+      status: this.toStringValue(
+        row.status ?? 'PRESENT',
+        'PRESENT',
+      ) as AttendanceStatus,
+      note,
+      createdAt: this.toIsoDate(row.createdAt),
+      updatedAt: this.toIsoDate(row.updatedAt),
     };
   }
 }

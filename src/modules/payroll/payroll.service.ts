@@ -236,20 +236,44 @@ export class PayrollService {
     return result.rows[0];
   }
 
-  private mapPayroll(row: Record<string, any>): PayrollRecord {
+  private mapPayroll(row: Record<string, unknown>): PayrollRecord {
+    const status =
+      typeof row.status === 'string' && row.status.trim()
+        ? row.status
+        : 'DRAFT';
+
+    const toNumber = (value: unknown, fallback = 0): number => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && value.trim() !== '') {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+      }
+
+      return fallback;
+    };
+
     return {
-      id: row.id,
-      employeeId: row.employeeId,
-      month: Number(row.month ?? 0),
-      totalMinutes: Number(row.totalMinutes ?? 0),
-      hourlyRate: Number(row.hourlyRate ?? 0),
-      baseSalary: Number(row.baseSalary ?? 0),
-      bonus: Number(row.bonus ?? 0),
-      deduction: Number(row.deduction ?? 0),
-      netSalary: Number(row.netSalary ?? 0),
-      status: row.status ?? 'DRAFT',
-      createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null,
-      updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+      id: String(row.id),
+      employeeId: String(row.employeeId),
+      month: toNumber(row.month),
+      totalMinutes: toNumber(row.totalMinutes),
+      hourlyRate: toNumber(row.hourlyRate),
+      baseSalary: toNumber(row.baseSalary),
+      bonus: toNumber(row.bonus),
+      deduction: toNumber(row.deduction),
+      netSalary: toNumber(row.netSalary),
+      status,
+      createdAt:
+        typeof row.createdAt === 'string' && row.createdAt
+          ? new Date(row.createdAt).toISOString()
+          : null,
+      updatedAt:
+        typeof row.updatedAt === 'string' && row.updatedAt
+          ? new Date(row.updatedAt).toISOString()
+          : null,
     };
   }
 }
