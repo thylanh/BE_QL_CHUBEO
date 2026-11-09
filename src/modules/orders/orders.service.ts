@@ -54,6 +54,29 @@ export interface CreateOrderInput {
   serviceFee: number;
 }
 
+export interface OrderReceipt {
+  paperWidthMm: 80;
+  title: string;
+  order: {
+    id: string;
+    code: string;
+    createdAt: string;
+    orderType: Order['orderType'];
+    table: string;
+    customerCount: number;
+    note?: string;
+    items: Array<{
+      name: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+    }>;
+    subtotal: number;
+    serviceFee: number;
+    total: number;
+  };
+}
+
 type OrderRow = Omit<Order, 'lines'> & { line: OrderItem | null };
 
 const orderQuery = `SELECT o.id, COALESCE(o.table_name, '') AS "table", COALESCE(o.order_type, 'Tại quán') AS "orderType", o.customer_count AS "customerCount", o.total::float8 - o.service_fee::float8 AS subtotal, o.service_fee::float8 AS "serviceFee", o.total::float8, o.status, o.note, o.inventory_deducted AS "inventoryDeducted", o.created_by AS "createdBy", o.created_at AS "createdAt", o.completed_at AS "completedAt", o.cancelled_at AS "cancelledAt", CASE WHEN oi.menu_item_id IS NULL THEN NULL ELSE json_build_object('menuItemId', oi.menu_item_id, 'name', oi.name, 'quantity', oi.quantity, 'price', oi.price::float8, 'total', oi.total::float8, 'ingredients', COALESCE(oi.ingredients, '[]'::jsonb)) END AS line FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id`;
@@ -98,6 +121,39 @@ export class OrdersStoreService {
     );
     return groupOrders(result.rows);
   }
+
+  async getOrderReceipt(id: string): Promise<OrderReceipt> {
+    const result = await this.database.query<OrderRow>(
+      `${orderQuery} WHERE o.id = $1`,
+      [id],
+    );
+    const order = groupOrders(result.rows)[0];
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    return {
+      paperWidthMm: 80,
+      title: 'HÓA ĐƠN BÁN HÀNG',
+      order: {
+        id: order.id,
+        code: order.code,
+        createdAt: order.createdAt,
+        orderType: order.orderType,
+        table: order.table,
+        customerCount: order.customerCount,
+        ...(order.note ? { note: order.note } : {}),
+        items: order.lines.map((line) => ({
+          name: line.name,
+          quantity: line.quantity,
+          unitPrice: line.price,
+          amount: line.total,
+        })),
+        subtotal: order.subtotal,
+        serviceFee: order.serviceFee,
+        total: order.total,
+      },
+    };
+  }
+
   private cleanupExpiredOrders(): Promise<void> {
     if (this.cleanupInProgress) return this.cleanupInProgress;
     this.cleanupInProgress = this.database

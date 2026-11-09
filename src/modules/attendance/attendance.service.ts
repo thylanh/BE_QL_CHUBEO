@@ -80,6 +80,19 @@ export class AttendanceService {
     );
 
     if (tableName === 'employee_attendance') {
+      const checkIn = new Date();
+      const workDate = this.getUtcDate(checkIn);
+      const attendanceToday = await this.database.query<{ id: string }>(
+        `SELECT id FROM employee_attendance WHERE employee_id = $1 AND work_date = $2::date LIMIT 1`,
+        [employeeId, workDate],
+      );
+
+      if (attendanceToday.rowCount) {
+        throw new BadRequestException(
+          'Nhân viên đã chấm công vào trong ngày hôm nay',
+        );
+      }
+
       const existing = await this.database.query<{ id: string }>(
         `SELECT id FROM employee_attendance WHERE employee_id = $1 AND check_out IS NULL ORDER BY work_date DESC LIMIT 1`,
         [employeeId],
@@ -91,7 +104,6 @@ export class AttendanceService {
         );
       }
 
-      const checkIn = new Date();
       const id = randomUUID();
       const status = this.getStatus(checkIn);
       await this.database.query(
@@ -118,6 +130,19 @@ export class AttendanceService {
       return this.mapAttendance(result.rows[0]);
     }
 
+    const checkIn = new Date();
+    const workDate = this.getUtcDate(checkIn);
+    const attendanceToday = await this.database.query<{ id: string }>(
+      `SELECT id FROM attendance WHERE employee_id = $1 AND check_in::date = $2::date LIMIT 1`,
+      [employeeId, workDate],
+    );
+
+    if (attendanceToday.rowCount) {
+      throw new BadRequestException(
+        'Nhân viên đã chấm công vào trong ngày hôm nay',
+      );
+    }
+
     const existing = await this.database.query<{ id: string }>(
       `SELECT id FROM attendance WHERE employee_id = $1 AND check_out IS NULL ORDER BY check_in DESC LIMIT 1`,
       [employeeId],
@@ -129,7 +154,6 @@ export class AttendanceService {
       );
     }
 
-    const checkIn = new Date();
     const id = randomUUID();
     const status = this.getStatus(checkIn);
     await this.database.query(
@@ -173,8 +197,22 @@ export class AttendanceService {
 
       const record = current.rows[0];
       const checkOut = new Date();
+      const checkInValue = this.toIsoDate(record.check_in);
+
+      if (!checkInValue) {
+        throw new BadRequestException('Dữ liệu chấm công không hợp lệ');
+      }
+
+      if (
+        this.getUtcDate(new Date(checkInValue)) !== this.getUtcDate(checkOut)
+      ) {
+        throw new BadRequestException(
+          'Chấm công ra phải trong cùng ngày với chấm công vào',
+        );
+      }
+
       const totalMinutes = this.calculateMinutes(
-        new Date(record.check_in),
+        new Date(checkInValue),
         checkOut,
       );
       const status = record.status === 'LATE' ? 'LATE' : 'PRESENT';
@@ -223,8 +261,20 @@ export class AttendanceService {
 
     const record = current.rows[0];
     const checkOut = new Date();
+    const checkInValue = this.toIsoDate(record.check_in);
+
+    if (!checkInValue) {
+      throw new BadRequestException('Dữ liệu chấm công không hợp lệ');
+    }
+
+    if (this.getUtcDate(new Date(checkInValue)) !== this.getUtcDate(checkOut)) {
+      throw new BadRequestException(
+        'Chấm công ra phải trong cùng ngày với chấm công vào',
+      );
+    }
+
     const totalMinutes = this.calculateMinutes(
-      new Date(record.check_in),
+      new Date(checkInValue),
       checkOut,
     );
 
@@ -291,6 +341,10 @@ export class AttendanceService {
     const expectedCheckIn = new Date(date);
     expectedCheckIn.setHours(8, 30, 0, 0);
     return date > expectedCheckIn ? 'LATE' : 'PRESENT';
+  }
+
+  private getUtcDate(date: Date): string {
+    return date.toISOString().slice(0, 10);
   }
 
   private calculateMinutes(checkIn: Date, checkOut: Date) {

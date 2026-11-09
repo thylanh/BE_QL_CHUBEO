@@ -33,6 +33,11 @@ export class OrdersController {
     return this.store.listOrders(validateOrderPeriod(period));
   }
 
+  @Get(':id/receipt')
+  receipt(@Param('id') id: string) {
+    return this.store.getOrderReceipt(id);
+  }
+
   @Post()
   @Roles('ADMIN', 'MANAGER', 'STAFF')
   create(
