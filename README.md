@@ -63,8 +63,23 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `GET /api/orders/:id/receipt` (dữ liệu hóa đơn khổ nhiệt 80 mm)
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
-  `GET /api/orders` lọc đơn theo ngày tạo: `today` là hôm nay, `week` là 7 ngày gần nhất và `month` là tháng hiện tại. Hệ thống chỉ lưu đơn hàng trong tháng hiện tại; khi sang tháng mới, đơn và chi tiết đơn của các tháng trước được tự động xóa (kiểm tra lúc khởi động, mỗi giờ và trước khi lấy danh sách). Giá trị `period` khác các lựa chọn trên trả về `400`.
-  `GET /api/orders/:id/receipt` trả về mã đơn, thời gian, loại đơn, bàn, món, số lượng, đơn giá, thành tiền, phí dịch vụ và tổng tiền để giao diện dựng/in bill nhiệt 80 mm. Đơn không tồn tại trả về `404`.
+
+`GET /api/orders` lọc đơn theo ngày tạo:
+
+- `today`: hôm nay
+- `week`: 7 ngày gần nhất
+- `month`: tháng hiện tại
+
+Đơn hàng và chi tiết đơn của các tháng trước được tự động xóa khi sang tháng mới. Giá trị `period` không hợp lệ trả về `400`.
+
+`GET /api/orders/:id/receipt` trả dữ liệu để giao diện dựng và in bill nhiệt 80 mm:
+
+- **Đầu bill:** tên quán **BÚN ĐẬU CHÚ BÉO** và tiêu đề hóa đơn.
+- **Thông tin đơn:** mã đơn, thời gian, loại đơn, bàn, số khách và ghi chú (nếu có).
+- **Danh sách món:** tên món, số lượng, đơn giá và thành tiền riêng từng món. Giao diện có thể căn tên món/số lượng/đơn giá bên trái, thành tiền bên phải như mẫu bill nhiệt.
+- **Thanh toán:** tạm tính, phí dịch vụ và tổng tiền.
+
+Đơn hàng không tồn tại trả về `404`.
 
 ### Menu
 

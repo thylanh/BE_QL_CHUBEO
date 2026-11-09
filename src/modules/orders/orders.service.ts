@@ -56,6 +56,7 @@ export interface CreateOrderInput {
 
 export interface OrderReceipt {
   paperWidthMm: 80;
+  storeName: string;
   title: string;
   order: {
     id: string;
@@ -132,6 +133,7 @@ export class OrdersStoreService {
 
     return {
       paperWidthMm: 80,
+      storeName: 'BÚN ĐẬU CHÚ BÉO',
       title: 'HÓA ĐƠN BÁN HÀNG',
       order: {
         id: order.id,
