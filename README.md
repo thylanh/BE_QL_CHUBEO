@@ -12,6 +12,7 @@ src/
 		attendance/ # Chấm công nhân viên
 		payroll/    # Tính lương và bảng lương nhân viên
 		reports/    # Báo cáo doanh thu
+		cashbook/    # Ghi nhận khoản thu và chi ngoài đơn hàng
 	shared/
 		database.service.ts  # Kết nối, transaction và khởi tạo schema
 		database.module.ts   # Module database dùng chung
@@ -43,12 +44,10 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 | Xem báo cáo doanh thu | ADMIN, MANAGER |
 
 ### Auth
-
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 
 ### User
-
 - `GET /api/users` (ADMIN)
 - `POST /api/users/register` (ADMIN)
 - `PATCH /api/users/:id` (ADMIN)
@@ -57,32 +56,16 @@ Các quyền nghiệp vụ:| Thao tác | Role |
   Dữ liệu trả về gồm `id`, `username`, `name`, `role`, `status`, `email`, `phone` và `createdAt`. Khi cập nhật user, `password` là tùy chọn; nếu gửi thì phải dài tối thiểu 6 ký tự.
 
 ### Orders
-
 - `GET /api/orders/menu`
 - `GET /api/orders?period=today|week|month` (mặc định `today`)
 - `GET /api/orders/:id/receipt` (dữ liệu hóa đơn khổ nhiệt 80 mm)
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
-
 `GET /api/orders` lọc đơn theo ngày tạo:
-
-- `today`: hôm nay
-- `week`: 7 ngày gần nhất
-- `month`: tháng hiện tại
-
-Đơn hàng và chi tiết đơn của các tháng trước được tự động xóa khi sang tháng mới. Giá trị `period` không hợp lệ trả về `400`.
-
 `GET /api/orders/:id/receipt` trả dữ liệu để giao diện dựng và in bill nhiệt 80 mm:
 
-- **Đầu bill:** tên quán **BÚN ĐẬU CHÚ BÉO** và tiêu đề hóa đơn.
-- **Thông tin đơn:** mã đơn, thời gian, loại đơn, bàn, số khách và ghi chú (nếu có).
-- **Danh sách món:** tên món, số lượng, đơn giá và thành tiền riêng từng món. Giao diện có thể căn tên món/số lượng/đơn giá bên trái, thành tiền bên phải như mẫu bill nhiệt.
-- **Thanh toán:** tạm tính, phí dịch vụ và tổng tiền.
-
-Đơn hàng không tồn tại trả về `404`.
 
 ### Menu
-
 - `GET /api/menu?active=true|false`
 - `GET /api/menu/:id`
 - `POST /api/menu` (ADMIN, MANAGER)
@@ -91,7 +74,6 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `DELETE /api/menu/:id` (ADMIN, MANAGER)
 
 ### Inventory
-
 - `GET /api/inventory`
 - `GET /api/inventory/summary` (số mặt hàng, mặt hàng sắp hết/hết hàng, giá trị tồn kho)
 - `GET /api/inventory/:id`
@@ -111,40 +93,22 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `GET /api/attendance?employeeId=` (ADMIN, MANAGER, STAFF)
 - `POST /api/attendance/check-in` (ADMIN, MANAGER, STAFF)
 - `POST /api/attendance/check-out` (ADMIN, MANAGER, STAFF)
-```sql
-attendance (
-  id TEXT,
-  employee_id TEXT,
-  check_in TIMESTAMPTZ,
-  check_out TIMESTAMPTZ,
-  total_minutes INTEGER,
-  status TEXT,
-  note TEXT
-)
-```
 
 ### Payroll
 - `GET /api/payroll?employeeId=&month=` (ADMIN, MANAGER)
 - `POST /api/payroll/calculate` (ADMIN, MANAGER)
-```sql
-payroll (
-  id TEXT,
-  employee_id TEXT,
-  month INTEGER,
-  total_minutes INTEGER,
-  hourly_rate NUMERIC,
-  base_salary NUMERIC,
-  bonus NUMERIC,
-  deduction NUMERIC,
-  net_salary NUMERIC,
-  status TEXT
-)
-```
 
 ### Reports
 
 - `GET /api/reports/revenue?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
 - `GET /api/reports/best-selling?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER; tối đa 5 món, chỉ tính đơn `COMPLETED`)
+
+### Sổ thu chi
+
+- `GET /api/cashbook?type=INCOME|EXPENSE&from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
+- `POST /api/cashbook` (ADMIN, MANAGER)
+
+Dùng sổ này cho các khoản ngoài doanh thu đơn hàng, ví dụ mua đồ lặt vặt (`type: "EXPENSE", category: "MISC_PURCHASE"`) hoặc bán ve chai (`type: "INCOME", category: "SCRAP_SALE"`). Loại khác dùng `category: "OTHER"`. `amount` phải lớn hơn 0; `description` là bắt buộc. Có thể gửi `occurredAt` (ISO datetime) và `note`; nếu bỏ `occurredAt`, hệ thống ghi thời điểm hiện tại. API danh sách trả về các khoản thu chi cùng tổng thu, tổng chi và số dư theo bộ lọc ngày/loại.
 
 ### Calendar
 

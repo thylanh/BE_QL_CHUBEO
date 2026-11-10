@@ -10,6 +10,7 @@ import { CalendarModule } from './modules/calendar/calendar.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
+import { CashbookModule } from './modules/cashbook/cashbook.module';
 import { DatabaseModule } from './shared/database.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { DatabaseModule } from './shared/database.module';
     EmployeesModule,
     AttendanceModule,
     PayrollModule,
+    CashbookModule,
   ],
 })
 export class AppModule {}
