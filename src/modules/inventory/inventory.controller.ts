@@ -6,10 +6,21 @@ import {
   Get,
   Param,
   Post,
+  Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { AuthGuard, Roles } from '../auth/auth.guard';
-import { InventoryInput, InventoryStoreService } from './inventory.service';
+import { User } from '../../shared/store.service';
+import {
+  InventoryInput,
+  InventoryMovementInput,
+  InventoryStoreService,
+  InventoryTransactionFilters,
+} from './inventory.service';
+
+type AuthenticatedRequest = Request & { user: User };
 
 @Controller('inventory')
 @UseGuards(AuthGuard)
@@ -22,6 +33,32 @@ export class InventoryController {
       ...item,
       lowStock: item.quantity <= item.minQuantity,
     }));
+  }
+
+  @Get('transactions/summary')
+  @Roles('ADMIN', 'MANAGER')
+  summarizeTransactions(
+    @Query('inventoryItemId') inventoryItemId?: string,
+    @Query('type') type?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.store.summarizeTransactions(
+      validateTransactionFilters({ inventoryItemId, type, from, to }),
+    );
+  }
+
+  @Get('transactions')
+  @Roles('ADMIN', 'MANAGER')
+  listTransactions(
+    @Query('inventoryItemId') inventoryItemId?: string,
+    @Query('type') type?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.store.listTransactions(
+      validateTransactionFilters({ inventoryItemId, type, from, to }),
+    );
   }
 
   @Post()
@@ -50,47 +87,124 @@ export class InventoryController {
 
   @Post(':id/stock-in')
   @Roles('ADMIN', 'MANAGER')
-  stockIn(@Param('id') id: string, @Body() body: { quantity?: number } = {}) {
-    return this.moveStock(id, body, 1);
+  stockIn(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() body: Record<string, unknown> = {},
+  ) {
+    return this.moveStock(id, body, 'IN', request.user.id);
   }
 
   @Post(':id/stock-out')
   @Roles('ADMIN', 'MANAGER')
-  stockOut(@Param('id') id: string, @Body() body: { quantity?: number } = {}) {
-    return this.moveStock(id, body, -1);
+  stockOut(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() body: Record<string, unknown> = {},
+  ) {
+    return this.moveStock(id, body, 'OUT', request.user.id);
   }
 
   private async moveStock(
     id: string,
-    body: { quantity?: number } | null,
-    direction: 1 | -1,
+    body: Record<string, unknown> | null,
+    type: 'IN' | 'OUT',
+    createdBy: string,
   ) {
-    const quantity = Number(body?.quantity);
-    if (!Number.isFinite(quantity) || quantity <= 0)
-      throw new BadRequestException('quantity phải là số lớn hơn 0');
-
-    const item = await this.store.getInventoryItem(id);
-    if (!item) throw new BadRequestException('Không tìm thấy nguyên liệu');
-
-    const conversionRate = Number(item.conversionRate ?? 1);
-    const adjustedQuantity =
-      item.purchaseUnit && item.purchaseUnit !== item.unit
-        ? quantity * conversionRate
-        : quantity;
-
-    const updated = await this.store.adjustInventory(
+    const input = validateStockMovement(body ?? {}, type === 'IN');
+    const result = await this.store.createStockTransaction(
       id,
-      adjustedQuantity * direction,
+      type,
+      input,
+      createdBy,
     );
-    if (!updated) throw new BadRequestException('Số lượng tồn không thể âm');
 
     return {
-      ...updated,
-      movement: direction === 1 ? 'IN' : 'OUT',
-      movedQuantity: quantity,
-      lowStock: updated.quantity <= updated.minQuantity,
+      ...result.inventory,
+      movement: type,
+      movedQuantity: input.quantity,
+      transaction: result.transaction,
+      lowStock: result.inventory.quantity <= result.inventory.minQuantity,
     };
   }
+}
+
+function validateTransactionFilters(
+  input: Record<string, string | undefined>,
+): InventoryTransactionFilters {
+  const type = input.type;
+  if (
+    type !== undefined &&
+    type !== 'IN' &&
+    type !== 'OUT' &&
+    type !== 'ADJUSTMENT'
+  ) {
+    throw new BadRequestException('type phải là IN, OUT hoặc ADJUSTMENT');
+  }
+  const inventoryItemId = input.inventoryItemId?.trim();
+  if (input.inventoryItemId !== undefined && !inventoryItemId) {
+    throw new BadRequestException('inventoryItemId không được để trống');
+  }
+  return {
+    ...(inventoryItemId ? { inventoryItemId } : {}),
+    ...(type ? { type: type } : {}),
+    ...(input.from === undefined ? {} : { from: input.from }),
+    ...(input.to === undefined ? {} : { to: input.to }),
+  };
+}
+
+function validateStockMovement(
+  body: Record<string, unknown>,
+  allowCost: boolean,
+): InventoryMovementInput {
+  const quantity = Number(body.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new BadRequestException('quantity phải là số lớn hơn 0');
+  }
+
+  const inputUnit = optionalText(body, 'inputUnit');
+  const note = optionalText(body, 'note');
+  const referenceId = optionalText(body, 'referenceId');
+  const unitCost = allowCost
+    ? optionalNonNegativeNumber(body, 'unitCost')
+    : undefined;
+  const totalCost = allowCost
+    ? optionalNonNegativeNumber(body, 'totalCost')
+    : undefined;
+
+  return {
+    quantity,
+    ...(inputUnit === undefined ? {} : { inputUnit }),
+    ...(unitCost === undefined ? {} : { unitCost }),
+    ...(totalCost === undefined ? {} : { totalCost }),
+    ...(referenceId === undefined ? {} : { referenceId }),
+    ...(note === undefined ? {} : { note }),
+  };
+}
+
+function optionalText(body: Record<string, unknown>, key: string) {
+  const value = body[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new BadRequestException(`${key} phải là chuỗi không được để trống`);
+  }
+  return value.trim();
+}
+
+function optionalNonNegativeNumber(body: Record<string, unknown>, key: string) {
+  const value = body[key];
+  if (value === undefined) return undefined;
+  if (
+    (typeof value !== 'number' && typeof value !== 'string') ||
+    (typeof value === 'string' && !value.trim())
+  ) {
+    throw new BadRequestException(`${key} phải là số không âm`);
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) {
+    throw new BadRequestException(`${key} phải là số không âm`);
+  }
+  return number;
 }
 
 function validateInventoryInput(

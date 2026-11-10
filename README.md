@@ -81,6 +81,10 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `DELETE /api/inventory/:id` (ADMIN, MANAGER)
 - `POST /api/inventory/:id/stock-in` (ADMIN, MANAGER; body: `{"quantity": 10}`)
 - `POST /api/inventory/:id/stock-out` (ADMIN, MANAGER; body: `{"quantity": 2}`)
+- `GET /api/inventory/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&inventoryItemId=&type=IN|OUT|ADJUSTMENT` (ADMIN, MANAGER)
+- `GET /api/inventory/transactions/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&inventoryItemId=` (ADMIN, MANAGER)
+
+Mỗi lần nhập hoặc xuất kho sẽ cập nhật tồn kho và lưu giao dịch cùng lúc. Body nhập kho hỗ trợ `quantity`, `inputUnit`, `unitCost` hoặc `totalCost`, `referenceId` và `note`, ví dụ `{"quantity":2,"unitCost":15000,"note":"Nhập từ nhà cung cấp"}`; `inputUnit` mặc định là đơn vị mua vào. Nếu nhập giá, hệ thống tính tổng tiền khi chỉ có `unitCost` và cập nhật giá vốn bình quân theo đơn vị tồn kho. API lịch sử trả về giao dịch cùng tổng số lượng nhập/xuất và chi phí nhập; API thống kê có thêm số liệu nhập theo từng nguyên liệu. `from` và `to` tính theo ngày, bao gồm cả ngày `to`.
 
 ### Employees
 - `GET /api/employees` (ADMIN, MANAGER)
