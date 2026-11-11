@@ -85,7 +85,7 @@ Chỉ role `ADMIN` được quản lý người dùng/tài khoản:
 ### Payroll
 
 - `GET /api/payroll?employeeId=<employeeId>&month=YYYY-MM` (ADMIN, MANAGER; ví dụ `month=2026-11`, `month` bắt buộc)
-- `POST /api/payroll/calculate` (ADMIN, MANAGER)
+- `POST /api/payroll/calculate` (ADMIN, MANAGER; `month` tùy chọn, định dạng `YYYY-MM`, ví dụ `2026-11`)
 
 ### Reports
 

@@ -34,7 +34,7 @@ export class PayrollController {
     @Body()
     body: {
       employeeId?: string;
-      month?: number;
+      month?: string;
       hourlyRate?: number;
       baseSalary?: number;
       bonus?: number;
@@ -44,6 +44,13 @@ export class PayrollController {
     const employeeId = body.employeeId?.trim();
     if (!employeeId) {
       throw new BadRequestException('employeeId là bắt buộc');
+    }
+
+    if (
+      body.month !== undefined &&
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(body.month)
+    ) {
+      throw new BadRequestException('month phải có định dạng YYYY-MM');
     }
 
     return this.payrollService.calculatePayroll(employeeId, {

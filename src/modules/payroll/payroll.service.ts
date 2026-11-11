@@ -5,7 +5,7 @@ import { DatabaseService } from '../../shared/database.service';
 export interface PayrollRecord {
   id: string;
   employeeId: string;
-  month: number;
+  month: string;
   totalMinutes: number;
   hourlyRate: number;
   baseSalary: number;
@@ -22,6 +22,7 @@ export class PayrollService {
   constructor(private readonly database: DatabaseService) {}
 
   async listPayroll(employeeId: string | undefined, month: string) {
+    const monthStart = `${month}-01`;
     const tableName = await this.resolveTableName(
       'payroll',
       'employee_payrolls',
@@ -31,7 +32,7 @@ export class PayrollService {
       const result = await this.database.query<{ [key: string]: any }>(
         `
           SELECT p.id, p.employee_id AS "employeeId",
-                 EXTRACT(MONTH FROM p.period_end)::int AS "month",
+                 TO_CHAR(p.period_end, 'YYYY-MM') AS "month",
                  COALESCE(SUM(a.hours_worked), 0)::int AS "totalMinutes",
                  p.base_salary AS "baseSalary",
                  p.total_salary AS "netSalary",
@@ -39,14 +40,15 @@ export class PayrollService {
                  p.created_at AS "createdAt",
                  p.updated_at AS "updatedAt"
           FROM employee_payrolls p
-          LEFT JOIN employee_attendance a ON a.employee_id = p.employee_id
-          WHERE ($1::uuid IS NULL OR p.employee_id = $1::uuid)
+          LEFT JOIN employee_attendance a
+            ON a.employee_id::text = p.employee_id::text
+          WHERE ($1::text IS NULL OR p.employee_id::text = $1::text)
             AND p.period_end >= $2::date
             AND p.period_end < ($2::date + INTERVAL '1 month')
           GROUP BY p.id, p.employee_id, p.base_salary, p.total_salary, p.status, p.created_at, p.updated_at
           ORDER BY p.created_at DESC
         `,
-        [employeeId ?? null, month ?? null],
+        [employeeId ?? null, monthStart],
       );
 
       return result.rows.map((row) => this.mapPayroll(row));
@@ -67,11 +69,10 @@ export class PayrollService {
                updated_at AS "updatedAt"
         FROM payroll
         WHERE ($1::text IS NULL OR employee_id = $1::text)
-          AND month = EXTRACT(MONTH FROM $2::date)::int
-          AND EXTRACT(YEAR FROM created_at)::int = EXTRACT(YEAR FROM $2::date)::int
+          AND month = $2::varchar
         ORDER BY created_at DESC
       `,
-      [employeeId ?? null, month ?? null],
+      [employeeId ?? null, month],
     );
 
     return result.rows.map((row) => this.mapPayroll(row));
@@ -80,7 +81,7 @@ export class PayrollService {
   async calculatePayroll(
     employeeId: string,
     input: {
-      month?: number;
+      month?: string;
       hourlyRate?: number;
       baseSalary?: number;
       bonus?: number;
@@ -88,7 +89,10 @@ export class PayrollService {
     } = {},
   ) {
     const employee = await this.getEmployee(employeeId);
-    const month = input.month ?? new Date().getMonth() + 1;
+    const month =
+      input.month ??
+      `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const monthStart = `${month}-01`;
     const tableName = await this.resolveTableName(
       'payroll',
       'employee_payrolls',
@@ -100,9 +104,10 @@ export class PayrollService {
           SELECT COALESCE(SUM(hours_worked), 0)::float8 AS total_minutes
           FROM employee_attendance
           WHERE employee_id = $1
-            AND EXTRACT(MONTH FROM work_date)::int = $2
+            AND work_date >= $2::date
+            AND work_date < ($2::date + INTERVAL '1 month')
         `,
-        [employeeId, month],
+        [employeeId, monthStart],
       );
 
       const totalMinutes = Number(attendance.rows[0]?.total_minutes ?? 0);
@@ -116,12 +121,10 @@ export class PayrollService {
         baseSalary + (totalMinutes / 60) * hourlyRate + bonus - deduction;
 
       const id = randomUUID();
-      const periodStart = new Date(
-        Date.UTC(new Date().getFullYear(), month - 1, 1),
+      const periodStart = monthStart;
+      const periodEnd = new Date(
+        Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0),
       )
-        .toISOString()
-        .slice(0, 10);
-      const periodEnd = new Date(Date.UTC(new Date().getFullYear(), month, 0))
         .toISOString()
         .slice(0, 10);
 
@@ -158,9 +161,10 @@ export class PayrollService {
         SELECT COALESCE(SUM(total_minutes), 0)::int AS total_minutes
         FROM attendance
         WHERE employee_id = $1
-          AND EXTRACT(MONTH FROM check_in)::int = $2
+          AND check_in >= $2::date
+          AND check_in < ($2::date + INTERVAL '1 month')
       `,
-      [employeeId, month],
+      [employeeId, monthStart],
     );
 
     const baseSalary = Number(input.baseSalary ?? 0);
@@ -260,7 +264,7 @@ export class PayrollService {
     return {
       id: String(row.id),
       employeeId: String(row.employeeId),
-      month: toNumber(row.month),
+      month: String(row.month),
       totalMinutes: toNumber(row.totalMinutes),
       hourlyRate: toNumber(row.hourlyRate),
       baseSalary: toNumber(row.baseSalary),
