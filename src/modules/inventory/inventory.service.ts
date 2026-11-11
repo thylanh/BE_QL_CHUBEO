@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../../shared/database.service';
 
@@ -105,6 +109,7 @@ interface InventoryTransactionItemSummaryRow {
   totalCost: number | string;
 }
 
+@Injectable()
 export class InventoryStoreService {
   constructor(private readonly database: DatabaseService) {}
 
