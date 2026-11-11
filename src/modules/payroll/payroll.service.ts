@@ -21,7 +21,7 @@ export interface PayrollRecord {
 export class PayrollService {
   constructor(private readonly database: DatabaseService) {}
 
-  async listPayroll(employeeId?: string, month?: number) {
+  async listPayroll(employeeId: string | undefined, month: string) {
     const tableName = await this.resolveTableName(
       'payroll',
       'employee_payrolls',
@@ -41,7 +41,8 @@ export class PayrollService {
           FROM employee_payrolls p
           LEFT JOIN employee_attendance a ON a.employee_id = p.employee_id
           WHERE ($1::uuid IS NULL OR p.employee_id = $1::uuid)
-            AND ($2::int IS NULL OR EXTRACT(MONTH FROM p.period_end)::int = $2)
+            AND p.period_end >= $2::date
+            AND p.period_end < ($2::date + INTERVAL '1 month')
           GROUP BY p.id, p.employee_id, p.base_salary, p.total_salary, p.status, p.created_at, p.updated_at
           ORDER BY p.created_at DESC
         `,
@@ -66,8 +67,9 @@ export class PayrollService {
                updated_at AS "updatedAt"
         FROM payroll
         WHERE ($1::text IS NULL OR employee_id = $1::text)
-          AND ($2::int IS NULL OR month = $2)
-        ORDER BY month DESC, created_at DESC
+          AND month = EXTRACT(MONTH FROM $2::date)::int
+          AND EXTRACT(YEAR FROM created_at)::int = EXTRACT(YEAR FROM $2::date)::int
+        ORDER BY created_at DESC
       `,
       [employeeId ?? null, month ?? null],
     );

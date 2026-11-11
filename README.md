@@ -1,32 +1,20 @@
 ## Cấu trúc module
 
-```text
 src/
-	modules/
-		menu/       # Quản lý thực đơn và định mức nguyên liệu
-		auth/       # Đăng nhập, session và AuthGuard
-		user/       # Quản lý tài khoản người dùng và phân quyền
-		orders/     # Thực đơn và đơn hàng
-		inventory/  # Tồn kho
-		employees/  # Quản lý nhân sự, chấm công và lương
-		attendance/ # Chấm công nhân viên
-		payroll/    # Tính lương và bảng lương nhân viên
-		reports/    # Báo cáo doanh thu
-		cashbook/    # Ghi nhận khoản thu và chi ngoài đơn hàng
-	shared/
-		database.service.ts  # Kết nối, transaction và khởi tạo schema
-		database.module.ts   # Module database dùng chung
-```
-
-Mỗi domain tự quản lý controller và `store.service.ts` của mình. `AppModule` chỉ lắp ghép các module domain.
-
-## Xác thực và phân quyền
-
-Đăng nhập bằng `POST /api/auth/login`, sau đó gửi token trong header:
-
-```text
-Authorization: Bearer <accessToken>
-```
+modules/
+menu/ # Quản lý thực đơn và định mức nguyên liệu
+auth/ # Đăng nhập, session và AuthGuard
+user/ # Quản lý tài khoản người dùng và phân quyền
+orders/ # Thực đơn và đơn hàng
+inventory/ # Tồn kho
+employees/ # Quản lý nhân sự, chấm công và lương
+attendance/ # Chấm công nhân viên
+payroll/ # Tính lương và bảng lương nhân viên
+reports/ # Báo cáo doanh thu
+cashbook/ # Ghi nhận khoản thu và chi ngoài đơn hàng
+shared/
+database.service.ts # Kết nối, transaction và khởi tạo schema
+database.module.ts # Module database dùng chung
 
 Chỉ role `ADMIN` được quản lý người dùng/tài khoản:
 
@@ -35,19 +23,13 @@ Chỉ role `ADMIN` được quản lý người dùng/tài khoản:
 - `PATCH /api/users/:id`
 - `DELETE /api/users/:id`
 
-Các quyền nghiệp vụ:| Thao tác | Role |
-| ----------------------- | --------------------- |
-| Xem và tạo đơn hàng | ADMIN, MANAGER, STAFF |
-| Đổi trạng thái đơn hàng | ADMIN, MANAGER |
-| Xem tồn kho và tổng quan | ADMIN, MANAGER, STAFF |
-| Nhập, xuất, điều chỉnh tồn kho | ADMIN, MANAGER |
-| Xem báo cáo doanh thu | ADMIN, MANAGER |
-
 ### Auth
+
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 
 ### User
+
 - `GET /api/users` (ADMIN)
 - `POST /api/users/register` (ADMIN)
 - `PATCH /api/users/:id` (ADMIN)
@@ -56,16 +38,17 @@ Các quyền nghiệp vụ:| Thao tác | Role |
   Dữ liệu trả về gồm `id`, `username`, `name`, `role`, `status`, `email`, `phone` và `createdAt`. Khi cập nhật user, `password` là tùy chọn; nếu gửi thì phải dài tối thiểu 6 ký tự.
 
 ### Orders
+
 - `GET /api/orders/menu`
 - `GET /api/orders?period=today|week|month` (mặc định `today`)
 - `GET /api/orders/:id/receipt` (dữ liệu hóa đơn khổ nhiệt 80 mm)
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status` (ADMIN, MANAGER)
-`GET /api/orders` lọc đơn theo ngày tạo:
-`GET /api/orders/:id/receipt` trả dữ liệu để giao diện dựng và in bill nhiệt 80 mm:
-
+  `GET /api/orders` lọc đơn theo ngày tạo:
+  `GET /api/orders/:id/receipt` trả dữ liệu để giao diện dựng và in bill nhiệt 80 mm:
 
 ### Menu
+
 - `GET /api/menu?active=true|false`
 - `GET /api/menu/:id`
 - `POST /api/menu` (ADMIN, MANAGER)
@@ -74,6 +57,7 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `DELETE /api/menu/:id` (ADMIN, MANAGER)
 
 ### Inventory
+
 - `GET /api/inventory`
 - `GET /api/inventory/summary` (số mặt hàng, mặt hàng sắp hết/hết hàng, giá trị tồn kho)
 - `GET /api/inventory/:id`
@@ -84,9 +68,8 @@ Các quyền nghiệp vụ:| Thao tác | Role |
 - `GET /api/inventory/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&inventoryItemId=&type=IN|OUT|ADJUSTMENT` (ADMIN, MANAGER)
 - `GET /api/inventory/transactions/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&inventoryItemId=` (ADMIN, MANAGER)
 
-Mỗi lần nhập hoặc xuất kho sẽ cập nhật tồn kho và lưu giao dịch cùng lúc. Body nhập kho hỗ trợ `quantity`, `inputUnit`, `unitCost` hoặc `totalCost`, `referenceId` và `note`, ví dụ `{"quantity":2,"unitCost":15000,"note":"Nhập từ nhà cung cấp"}`; `inputUnit` mặc định là đơn vị mua vào. Nếu nhập giá, hệ thống tính tổng tiền khi chỉ có `unitCost` và cập nhật giá vốn bình quân theo đơn vị tồn kho. API lịch sử trả về giao dịch cùng tổng số lượng nhập/xuất và chi phí nhập; API thống kê có thêm số liệu nhập theo từng nguyên liệu. `from` và `to` tính theo ngày, bao gồm cả ngày `to`.
-
 ### Employees
+
 - `GET /api/employees` (ADMIN, MANAGER)
 - `GET /api/employees/:id` (ADMIN, MANAGER, STAFF)
 - `POST /api/employees` (ADMIN, MANAGER)
@@ -94,12 +77,14 @@ Mỗi lần nhập hoặc xuất kho sẽ cập nhật tồn kho và lưu giao d
 - `DELETE /api/employees/:id` (ADMIN)
 
 ### Attendance
+
 - `GET /api/attendance?employeeId=` (ADMIN, MANAGER, STAFF)
 - `POST /api/attendance/check-in` (ADMIN, MANAGER, STAFF)
 - `POST /api/attendance/check-out` (ADMIN, MANAGER, STAFF)
 
 ### Payroll
-- `GET /api/payroll?employeeId=&month=` (ADMIN, MANAGER)
+
+- `GET /api/payroll?employeeId=<employeeId>&month=YYYY-MM` (ADMIN, MANAGER; ví dụ `month=2026-11`, `month` bắt buộc)
 - `POST /api/payroll/calculate` (ADMIN, MANAGER)
 
 ### Reports
@@ -112,13 +97,13 @@ Mỗi lần nhập hoặc xuất kho sẽ cập nhật tồn kho và lưu giao d
 - `GET /api/cashbook?type=INCOME|EXPENSE&from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN, MANAGER)
 - `POST /api/cashbook` (ADMIN, MANAGER)
 
-Dùng sổ này cho các khoản ngoài doanh thu đơn hàng, ví dụ mua đồ lặt vặt (`type: "EXPENSE", category: "MISC_PURCHASE"`) hoặc bán ve chai (`type: "INCOME", category: "SCRAP_SALE"`). Loại khác dùng `category: "OTHER"`. `amount` phải lớn hơn 0; `description` là bắt buộc. Có thể gửi `occurredAt` (ISO datetime) và `note`; nếu bỏ `occurredAt`, hệ thống ghi thời điểm hiện tại. API danh sách trả về các khoản thu chi cùng tổng thu, tổng chi và số dư theo bộ lọc ngày/loại.
-
 ### Calendar
 
 - `GET /api/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
 - `POST /api/calendar`
 - `PATCH /api/calendar/:id`
 - `DELETE /api/calendar/:id`
+
+### Up Image
 
 - `POST /api/uploads/image` (đã đăng nhập)

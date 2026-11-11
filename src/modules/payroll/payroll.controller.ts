@@ -21,8 +21,11 @@ export class PayrollController {
     @Query('employeeId') employeeId?: string,
     @Query('month') month?: string,
   ) {
-    const parsedMonth = month ? Number(month) : undefined;
-    return this.payrollService.listPayroll(employeeId, parsedMonth);
+    if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      throw new BadRequestException('month phải có định dạng YYYY-MM');
+    }
+
+    return this.payrollService.listPayroll(employeeId, month);
   }
 
   @Post('calculate')
