@@ -106,6 +106,7 @@ interface InventoryTransactionItemSummaryRow {
   unit: string;
   transactionCount: number | string;
   quantity: number | string;
+  stockOutQuantity: number | string;
   totalCost: number | string;
 }
 
@@ -302,6 +303,8 @@ export class InventoryStoreService {
               COUNT(*) FILTER (WHERE t.type = 'IN')::int AS "transactionCount",
               COALESCE(SUM(t.quantity * t.conversion_rate)
                 FILTER (WHERE t.type = 'IN'), 0)::float8 AS quantity,
+              COALESCE(SUM(t.quantity * t.conversion_rate)
+                FILTER (WHERE t.type = 'OUT'), 0)::float8 AS "stockOutQuantity",
               COALESCE(SUM(t.total_cost)
                 FILTER (WHERE t.type = 'IN'), 0)::float8 AS "totalCost"
        FROM inventory_transactions t
@@ -311,7 +314,7 @@ export class InventoryStoreService {
          AND ($3::date IS NULL OR t.created_at >= $3::date)
          AND ($4::date IS NULL OR t.created_at < ($4::date + INTERVAL '1 day'))
        GROUP BY t.inventory_item_id, i.name, i.unit
-       HAVING COUNT(*) FILTER (WHERE t.type = 'IN') > 0
+       HAVING COUNT(*) FILTER (WHERE t.type IN ('IN', 'OUT')) > 0
        ORDER BY quantity DESC, i.name`,
       [
         filters.inventoryItemId ?? null,
@@ -328,6 +331,8 @@ export class InventoryStoreService {
         unit: row.unit,
         transactionCount: Number(row.transactionCount),
         quantity: Number(row.quantity),
+        stockInQuantity: Number(row.quantity),
+        stockOutQuantity: Number(row.stockOutQuantity),
         totalCost: Number(row.totalCost),
       })),
     };
