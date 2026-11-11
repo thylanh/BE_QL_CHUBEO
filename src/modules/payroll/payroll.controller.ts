@@ -55,10 +55,13 @@ export class PayrollController {
 
     return this.payrollService.calculatePayroll(employeeId, {
       month: body.month,
-      hourlyRate: Number(body.hourlyRate ?? 0),
-      baseSalary: Number(body.baseSalary ?? 0),
-      bonus: Number(body.bonus ?? 0),
-      deduction: Number(body.deduction ?? 0),
+      hourlyRate:
+        body.hourlyRate === undefined ? undefined : Number(body.hourlyRate),
+      baseSalary:
+        body.baseSalary === undefined ? undefined : Number(body.baseSalary),
+      bonus: body.bonus === undefined ? undefined : Number(body.bonus),
+      deduction:
+        body.deduction === undefined ? undefined : Number(body.deduction),
     });
   }
 }

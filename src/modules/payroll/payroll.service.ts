@@ -68,8 +68,8 @@ export class PayrollService {
                created_at AS "createdAt",
                updated_at AS "updatedAt"
         FROM payroll
-        WHERE ($1::text IS NULL OR employee_id = $1::text)
-          AND month = $2::varchar
+        WHERE ($1::text IS NULL OR employee_id::text = $1::text)
+          AND month::text = $2::text
         ORDER BY created_at DESC
       `,
       [employeeId ?? null, month],
@@ -167,7 +167,7 @@ export class PayrollService {
       [employeeId, monthStart],
     );
 
-    const baseSalary = Number(input.baseSalary ?? 0);
+    const baseSalary = Number(input.baseSalary ?? employee.base_salary ?? 0);
     const hourlyRate = Number(
       input.hourlyRate ?? (baseSalary > 0 ? baseSalary / 160 : 0),
     );
@@ -243,6 +243,21 @@ export class PayrollService {
   }
 
   private mapPayroll(row: Record<string, unknown>): PayrollRecord {
+    const value = (...keys: string[]) =>
+      keys
+        .map((key) => row[key])
+        .find((item) => item !== undefined && item !== null);
+    const dateToIso = (value: unknown) => {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+
+      if (typeof value === 'string' && value) {
+        return new Date(value).toISOString();
+      }
+
+      return null;
+    };
     const status =
       typeof row.status === 'string' && row.status.trim()
         ? row.status
@@ -260,26 +275,30 @@ export class PayrollService {
 
       return fallback;
     };
+    const monthValue = value('month', 'period_end');
+    const month =
+      typeof monthValue === 'string' && /^\d{4}-\d{2}$/.test(monthValue)
+        ? monthValue
+        : (dateToIso(monthValue)?.slice(0, 7) ?? '');
+    const employeeId = value('employeeId', 'employee_id');
+    const id = value('id');
 
     return {
-      id: String(row.id),
-      employeeId: String(row.employeeId),
-      month: String(row.month),
-      totalMinutes: toNumber(row.totalMinutes),
-      hourlyRate: toNumber(row.hourlyRate),
-      baseSalary: toNumber(row.baseSalary),
-      bonus: toNumber(row.bonus),
-      deduction: toNumber(row.deduction),
-      netSalary: toNumber(row.netSalary),
+      id: typeof id === 'string' || typeof id === 'number' ? String(id) : '',
+      employeeId:
+        typeof employeeId === 'string' || typeof employeeId === 'number'
+          ? String(employeeId)
+          : '',
+      month,
+      totalMinutes: toNumber(value('totalMinutes', 'total_minutes')),
+      hourlyRate: toNumber(value('hourlyRate', 'hourly_rate')),
+      baseSalary: toNumber(value('baseSalary', 'base_salary')),
+      bonus: toNumber(value('bonus', 'allowance')),
+      deduction: toNumber(value('deduction')),
+      netSalary: toNumber(value('netSalary', 'net_salary', 'total_salary')),
       status,
-      createdAt:
-        typeof row.createdAt === 'string' && row.createdAt
-          ? new Date(row.createdAt).toISOString()
-          : null,
-      updatedAt:
-        typeof row.updatedAt === 'string' && row.updatedAt
-          ? new Date(row.updatedAt).toISOString()
-          : null,
+      createdAt: dateToIso(value('createdAt', 'created_at')),
+      updatedAt: dateToIso(value('updatedAt', 'updated_at')),
     };
   }
 }
