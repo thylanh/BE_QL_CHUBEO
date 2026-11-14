@@ -25,7 +25,7 @@ export class AuthGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Request & { user?: User }>();
     const token = request.headers.authorization?.replace(/^Bearer\s+/i, '');
-    const user = token && (await this.store.getUserByToken(token));
+    const user = token ? await this.store.getUserByToken(token) : undefined;
     if (!user)
       throw new UnauthorizedException(
         'Cần đăng nhập để thực hiện thao tác này',

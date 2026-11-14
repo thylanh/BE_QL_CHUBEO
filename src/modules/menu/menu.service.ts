@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../../shared/database.service';
@@ -70,6 +70,7 @@ export class MenuStoreService {
           input.category ?? null,
           input.description ?? null,
           input.image ?? null,
+          input.active ?? true,
         ],
       );
       await replaceIngredients(client, id, input.ingredients ?? []);
@@ -92,6 +93,7 @@ export class MenuStoreService {
       if (input.description !== undefined)
         setField('description', input.description ?? null);
       if (input.image !== undefined) setField('image', input.image ?? null);
+      if (input.active !== undefined) setField('active', input.active);
       if (fields.length) {
         values.push(id);
         const result = await client.query(
@@ -136,6 +138,23 @@ async function replaceIngredients(
     'DELETE FROM menu_item_ingredients WHERE menu_item_id = $1',
     [menuItemId],
   );
+  if (!ingredients.length) return;
+
+  const ingredientIds = [
+    ...new Set(ingredients.map((item) => item.ingredient_id)),
+  ];
+  const inventoryResult = await client.query<{ id: string }>(
+    'SELECT id FROM inventory WHERE id = ANY($1)',
+    [ingredientIds],
+  );
+  const existingIds = new Set(inventoryResult.rows.map((row) => row.id));
+  const missingIds = ingredientIds.filter((id) => !existingIds.has(id));
+  if (missingIds.length) {
+    throw new BadRequestException(
+      `Nguyên liệu không tồn tại trong kho (ID: ${missingIds.join(', ')})`,
+    );
+  }
+
   for (const ingredient of ingredients)
     await client.query(
       'INSERT INTO menu_item_ingredients (menu_item_id, ingredient_id, amount) VALUES ($1, $2, $3)',

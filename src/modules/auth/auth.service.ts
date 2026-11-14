@@ -9,6 +9,8 @@ export interface User {
   role: 'ADMIN' | 'MANAGER' | 'STAFF';
   status: 'ACTIVE' | 'INACTIVE';
   phone?: string;
+  tenantId?: string;
+  branchId?: string;
   createdAt: string;
 }
 
@@ -21,8 +23,17 @@ export class AuthService {
     if (!user || !user.active || !this.store.verifyPassword(user, password)) {
       throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
     }
-    const session = await this.store.createSession(user.id);
-    return { accessToken: session.token, user: this.publicUser(user) };
+
+    const tenantId = user.tenantId ?? null;
+    const branchId = user.branchId ?? null;
+    const session = await this.store.createSession(user.id, tenantId ?? undefined, branchId ?? undefined);
+
+    return {
+      accessToken: session.token,
+      user: this.publicUser({ ...user, tenantId: tenantId ?? undefined, branchId: branchId ?? undefined }),
+      tenantId,
+      branchId,
+    };
   }
 
   async logout(token: string) {
@@ -37,6 +48,8 @@ export class AuthService {
       role: user.role,
       status: user.active ? 'ACTIVE' : 'INACTIVE',
       ...(user.phone ? { phone: user.phone } : {}),
+      ...(user.tenantId ? { tenantId: user.tenantId } : {}),
+      ...(user.branchId ? { branchId: user.branchId } : {}),
       createdAt: user.createdAt
         ? new Date(user.createdAt).toISOString()
         : new Date(0).toISOString(),

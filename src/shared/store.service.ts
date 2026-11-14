@@ -11,6 +11,8 @@ export interface User {
   active: boolean;
   email?: string;
   phone?: string;
+  tenantId?: string;
+  branchId?: string;
   createdAt?: string;
 }
 

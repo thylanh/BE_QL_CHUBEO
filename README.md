@@ -1,3 +1,22 @@
+## Multi-tenant / branch setup
+
+Dự án hiện đang hiện thực hóa mô hình multi-tenant theo hướng:
+
+- `tenants`: doanh nghiệp
+- `branches`: chi nhánh thuộc từng doanh nghiệp
+- `users`: người dùng thuộc một tenant, có thể chọn branch đang hoạt động
+- `sessions`: lưu tenant_id và branch_id để xác minh quyền truy cập trên mọi API
+
+Migration an toàn cho DB đang chạy nằm trong `migrations/tenant-branch-init.sql`.
+
+Nội dung chính:
+1. Tạo bảng `tenants` và `branches`
+2. Bổ sung `tenant_id`, `branch_id` cho `users` và `sessions`
+3. Gán dữ liệu cũ vào tenant/branch mặc định
+4. Khóa ngoại và index cho mối quan hệ
+
+Backend không tin dữ liệu `tenantId`/`branchId` từ frontend; giá trị phải đến từ session token do server sinh ra.
+
 ## Cấu trúc module
 
 src/
